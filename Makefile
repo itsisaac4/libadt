@@ -1,8 +1,8 @@
 CC := gcc
 CXX := g++
 
-CFLAGS := -std=c11 -Wall -Wextra -Wpedantic -Werror -g
-CXXFLAGS := -std=c++17 -Wall -Wextra -Wpedantic -Werror -g
+CFLAGS := -std=c23 -Wall -Wextra -Wpedantic -Werror -g
+CXXFLAGS := -std=c++23 -Wall -Wextra -Wpedantic -Werror -g
 
 INCLUDES := -Iinclude
 
