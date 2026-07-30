@@ -20,6 +20,8 @@ MAIN_OBJECT := $(BUILD_DIR)/main.o
 
 TEST_SOURCES := $(wildcard $(TEST_DIR)/*.cpp)
 TEST_OBJECTS := $(patsubst $(TEST_DIR)/%.cpp,$(BUILD_DIR)/tests/%.o,$(TEST_SOURCES))
+C_TEST_SOURCES := $(wildcard $(TEST_DIR)/*.c)
+C_TEST_OBJECTS := $(patsubst $(TEST_DIR)/%.c,$(BUILD_DIR)/tests/c_%.o,$(C_TEST_SOURCES))
 
 CPPUTEST_INCLUDES := -I/usr/local/include
 CPPUTEST_LIBS := -L/usr/local/lib -lCppUTest -lCppUTestExt
@@ -48,8 +50,12 @@ run: build
 test: $(TEST_TARGET)
 	./$(TEST_TARGET)
 
-$(TEST_TARGET): $(C_OBJECTS) $(TEST_OBJECTS)
+$(TEST_TARGET): $(C_OBJECTS) $(C_TEST_OBJECTS) $(TEST_OBJECTS)
 	$(CXX) $(CXXFLAGS) $^ $(CPPUTEST_LIBS) -o $@
+
+$(BUILD_DIR)/tests/c_%.o: $(TEST_DIR)/%.c
+	@mkdir -p $(BUILD_DIR)/tests
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 $(BUILD_DIR)/tests/%.o: $(TEST_DIR)/%.cpp
 	@mkdir -p $(BUILD_DIR)/tests

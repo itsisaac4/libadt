@@ -1,17 +1,92 @@
 #include "libadt/dynamic_array.h"
+
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
-#include <stdio.h>
 
-#define INITIAL_CAPACITY 8
+#define DA_INITIAL_CAPACITY 8
 
 #define ELEMENT_AT(array, index) \
-    ((unsigned char *)(array)->data + (index) * (array)->typeInfo.elementSize)
+    ((unsigned char *)(array)->data + (index) * (array)->super.type.elementSize)
+
+#define CONST_ELEMENT_AT(array, index) \
+    ((const unsigned char *)(array)->data + (index) * (array)->super.type.elementSize)
+
+static void VisitElements(const ADT_Super_t *adt, ADT_ConstVisitFn_t visitor, void *context)
+{
+    if (adt == NULL || visitor == NULL)
+    {
+        return;
+    }
+
+    const DynamicArray_t *array = (const DynamicArray_t *)adt;
+
+    for (size_t i = 0; i < adt->size; i++)
+    {
+        visitor(CONST_ELEMENT_AT(array, i), i, context);
+    }
+}
+
+static void VisitMutableElements(ADT_Super_t *adt, ADT_MutableVisitFn_t visitor, void *context)
+{
+    if (adt == NULL || visitor == NULL)
+    {
+        return;
+    }
+
+    DynamicArray_t *array = (DynamicArray_t *)adt;
+
+    for (size_t i = 0; i < adt->size; i++)
+    {
+        visitor(ELEMENT_AT(array, i), i, context);
+    }
+}
+
+static const ADT_VTable_t DA_VTABLE = {
+    .containerName = "DynamicArray",
+    .visit = VisitElements,
+    .visitMutable = VisitMutableElements};
+
+static void DestroyElement(DynamicArray_t *array, size_t index)
+{
+    if (array->super.type.destroy != NULL)
+    {
+        array->super.type.destroy(ELEMENT_AT(array, index));
+    }
+}
+
+static bool PointsIntoStorage(const DynamicArray_t *array, const void *pointer)
+{
+    if (array->data == NULL || pointer == NULL)
+    {
+        return false;
+    }
+
+    const uintptr_t storage = (uintptr_t)array->data;
+    const uintptr_t address = (uintptr_t)pointer;
+    const size_t storageSize = array->capacity * array->super.type.elementSize;
+
+    return address >= storage && address - storage < storageSize;
+}
+
+static void CloseGap(DynamicArray_t *array, size_t index)
+{
+    size_t elementsToMove = array->super.size - index - 1;
+
+    if (elementsToMove > 0)
+    {
+        memmove(
+            ELEMENT_AT(array, index),
+            ELEMENT_AT(array, index + 1),
+            elementsToMove * array->super.type.elementSize);
+    }
+
+    array->super.size--;
+}
 
 static bool EnsureCapacity(DynamicArray_t *array, size_t requiredCapacity)
 {
-    if (array == NULL || array->typeInfo.elementSize == 0)
+    if (array == NULL || array->super.type.elementSize == 0)
     {
         return false;
     }
@@ -21,7 +96,7 @@ static bool EnsureCapacity(DynamicArray_t *array, size_t requiredCapacity)
         return true;
     }
 
-    size_t newCapacity = array->capacity == 0 ? INITIAL_CAPACITY : array->capacity;
+    size_t newCapacity = array->capacity == 0 ? DA_INITIAL_CAPACITY : array->capacity;
     while (newCapacity < requiredCapacity)
     {
         if (newCapacity > SIZE_MAX / 2)
@@ -32,12 +107,12 @@ static bool EnsureCapacity(DynamicArray_t *array, size_t requiredCapacity)
         newCapacity *= 2;
     }
 
-    if (newCapacity > SIZE_MAX / array->typeInfo.elementSize)
+    if (newCapacity > SIZE_MAX / array->super.type.elementSize)
     {
         return false;
     }
 
-    void *newData = realloc(array->data, newCapacity * array->typeInfo.elementSize);
+    void *newData = realloc(array->data, newCapacity * array->super.type.elementSize);
 
     if (newData == NULL)
     {
@@ -50,271 +125,36 @@ static bool EnsureCapacity(DynamicArray_t *array, size_t requiredCapacity)
     return true;
 }
 
-void da_Print(const DynamicArray_t *array)
+bool da_Init(DynamicArray_t *array, ADT_TypeInfo_t typeInfo)
 {
-    if (array == NULL || array->data == NULL || array->typeInfo.print == NULL)
-    {
-        printf("DynamicArray is NULL, uninitialized, or print function is NULL.\n");
-        return;
-    }
-
-    printf("DynamicArray (size: %zu, capacity: %zu): [", array->size, array->capacity);
-    for (size_t i = 0; i < array->size; i++)
-    {
-        if (i > 0)
-        {
-            printf(", ");
-        }
-        array->typeInfo.print(ELEMENT_AT(array, i));
-    }
-    printf("]\n");
-}
-
-void da_PrintDebug(const DynamicArray_t *array, const char *expression, const char *file, int line)
-{
-    printf("DynamicArray Debug\n");
-    printf("  expression: %s\n", expression);
-    printf("  location: %s:%d\n", file, line);
-    printf("  address: %p\n", (const void *)array);
-
-    if (array == NULL)
-    {
-        printf("  state: NULL\n");
-        return;
-    }
-
-    printf("  data: %p\n", array->data);
-    printf("  size: %zu\n", array->size);
-    printf("  capacity: %zu\n", array->capacity);
-    printf("  element size: %zu\n", array->typeInfo.elementSize);
-
-    printf(
-        "  comparator: %s\n",
-        array->typeInfo.compare != NULL ? "set" : "NULL");
-
-    printf(
-        "  printer: %s\n",
-        array->typeInfo.print != NULL ? "set" : "NULL");
-
-    printf(
-        "  destructor: %s\n",
-        array->typeInfo.destroy != NULL ? "set" : "NULL");
-
-    printf("  elements: ");
-
-    if (array->data == NULL)
-    {
-        printf("<no storage>\n");
-        return;
-    }
-
-    if (array->typeInfo.print == NULL)
-    {
-        printf("<no print function>\n");
-        return;
-    }
-
-    printf("[");
-
-    for (size_t i = 0; i < array->size; i++)
-    {
-        if (i > 0)
-        {
-            printf(", ");
-        }
-
-        array->typeInfo.print(ELEMENT_AT(array, i));
-    }
-
-    printf("]\n");
-}
-
-size_t da_Size(DynamicArray_t *array)
-{
-
-    if (array == NULL)
-    {
-        return 0;
-    }
-
-    return array->size;
-}
-
-bool da_IsEmpty(DynamicArray_t *array)
-{
-    if (array == NULL)
-    {
-        return true;
-    }
-
-    return array->size == 0;
-}
-
-bool da_IndexOf(DynamicArray_t *array, const void *element, size_t *outIndex)
-{
-    if (array == NULL || element == NULL || outIndex == NULL)
+    if (array == NULL || typeInfo.elementSize == 0)
     {
         return false;
     }
 
-    for (size_t i = 0; i < array->size; i++)
-    {
-        void *currentElement = ELEMENT_AT(array, i);
-
-        if (array->typeInfo.compare != NULL)
-        {
-            if (array->typeInfo.compare(currentElement, element) == 0)
-            {
-                *outIndex = i;
-                return true;
-            }
-        }
-        else
-        {
-            if (memcmp(currentElement, element, array->typeInfo.elementSize) == 0)
-            {
-                *outIndex = i;
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-bool da_Contains(DynamicArray_t *array, const void *element)
-{
-    if (array == NULL || element == NULL)
+    if (DA_INITIAL_CAPACITY > SIZE_MAX / typeInfo.elementSize)
     {
         return false;
     }
 
-    size_t index;
-    return da_IndexOf(array, element, &index);
-}
+    void *data = malloc(DA_INITIAL_CAPACITY * typeInfo.elementSize);
 
-bool da_Set(DynamicArray_t *array, size_t index, const void *element)
-{
-    if (array == NULL || element == NULL || index >= array->size)
+    if (data == NULL)
     {
         return false;
     }
 
-    memcpy(ELEMENT_AT(array, index), element, array->typeInfo.elementSize);
-    return true;
-}
-
-bool da_Get(DynamicArray_t *array, size_t index, void *outElement)
-{
-    if (array == NULL || outElement == NULL || index >= array->size)
-    {
-        return false;
-    }
-
-    memcpy(outElement, ELEMENT_AT(array, index), array->typeInfo.elementSize);
-    return true;
-}
-
-void da_Clear(DynamicArray_t *array)
-{
-    if (array == NULL)
-    {
-        return;
-    }
-
-    array->size = 0;
-}
-
-bool da_Remove(DynamicArray_t *array, size_t index)
-{
-    if (array == NULL || index >= array->size)
-    {
-        return false;
-    }
-
-    size_t elementsToMove = array->size - index - 1;
-
-    if (elementsToMove > 0)
-    {
-        memmove(ELEMENT_AT(array, index),
-                ELEMENT_AT(array, index + 1),
-                elementsToMove * array->typeInfo.elementSize);
-    }
-
-    array->size--;
-    return true;
-}
-
-bool da_Insert(DynamicArray_t *array, size_t index, const void *element)
-{
-    if (array == NULL || element == NULL || index > array->size || !EnsureCapacity(array, array->size + 1))
-    {
-        return false;
-    }
-
-    unsigned char *dest = ELEMENT_AT(array, index + 1);
-    size_t elementsToMove = array->size - index;
-
-    if (elementsToMove > 0)
-    {
-        memmove(dest,
-                ELEMENT_AT(array, index),
-                elementsToMove * array->typeInfo.elementSize);
-    }
-
-    memcpy(ELEMENT_AT(array, index), element, array->typeInfo.elementSize);
-    array->size++;
+    array->super = (ADT_Super_t){
+        .vtable = &DA_VTABLE,
+        .size = 0,
+        .type = typeInfo};
+    array->data = data;
+    array->capacity = DA_INITIAL_CAPACITY;
 
     return true;
 }
 
-bool da_Prepend(DynamicArray_t *array, const void *element)
-{
-    if (array == NULL || element == NULL)
-    {
-        return false;
-    }
-
-    return da_Insert(array, 0, element);
-}
-
-bool da_Append(DynamicArray_t *array, const void *element)
-{
-    if (array == NULL || element == NULL)
-    {
-        return false;
-    }
-
-    return da_Insert(array, array->size, element);
-}
-
-void da_Destroy(DynamicArray_t *array)
-{
-    if (array == NULL)
-    {
-        return;
-    }
-
-    if (array->typeInfo.destroy != NULL)
-    {
-        for (size_t i = 0; i < array->size; i++)
-        {
-            void *element =
-                (unsigned char *)array->data +
-                i * array->typeInfo.elementSize;
-
-            array->typeInfo.destroy(element);
-        }
-    }
-
-    free(array->data);
-
-    array->data = NULL;
-    array->size = 0;
-    array->capacity = 0;
-    array->typeInfo = (ADT_TypeInfo_t){0};
-}
-
-bool da_InitFrom(DynamicArray_t *array, const void *elements, size_t initialCount, const ADT_TypeInfo_t typeInfo)
+bool da_InitFrom(DynamicArray_t *array, const void *elements, size_t initialCount, ADT_TypeInfo_t typeInfo)
 {
     if (array == NULL || typeInfo.elementSize == 0)
     {
@@ -326,48 +166,276 @@ bool da_InitFrom(DynamicArray_t *array, const void *elements, size_t initialCoun
         return initialCount > 0 ? false : da_Init(array, typeInfo);
     }
 
-    size_t capacity = INITIAL_CAPACITY;
+    size_t capacity = DA_INITIAL_CAPACITY;
     while (capacity < initialCount)
     {
+        if (capacity > SIZE_MAX / 2)
+        {
+            return false;
+        }
+
         capacity *= 2;
     }
 
-    array->data = malloc(capacity * typeInfo.elementSize);
+    if (capacity > SIZE_MAX / typeInfo.elementSize)
+    {
+        return false;
+    }
 
-    if (array->data == NULL)
+    void *data = malloc(capacity * typeInfo.elementSize);
+
+    if (data == NULL)
     {
         return false;
     }
 
     if (initialCount > 0)
     {
-        memcpy(array->data, elements, initialCount * typeInfo.elementSize);
+        memcpy(data, elements, initialCount * typeInfo.elementSize);
     }
 
-    array->size = initialCount;
+    array->super = (ADT_Super_t){
+        .vtable = &DA_VTABLE,
+        .size = initialCount,
+        .type = typeInfo};
+    array->data = data;
     array->capacity = capacity;
-    array->typeInfo = typeInfo;
 
     return true;
 }
 
-bool da_Init(DynamicArray_t *array, const ADT_TypeInfo_t typeInfo)
+bool da_Get(const DynamicArray_t *array, size_t index, void *outElement)
 {
-    if (array == NULL || typeInfo.elementSize == 0)
+    if (array == NULL || outElement == NULL || index >= array->super.size)
     {
         return false;
     }
 
-    array->data = malloc(INITIAL_CAPACITY * typeInfo.elementSize);
-
-    if (array->data == NULL)
-    {
-        return false;
-    }
-
-    array->size = 0;
-    array->capacity = INITIAL_CAPACITY;
-    array->typeInfo = typeInfo;
-
+    memcpy(outElement, ELEMENT_AT(array, index), array->super.type.elementSize);
     return true;
+}
+
+bool da_SetRef(DynamicArray_t *array, size_t index, const void *element)
+{
+    if (array == NULL || element == NULL || index >= array->super.size)
+    {
+        return false;
+    }
+
+    void *destination = ELEMENT_AT(array, index);
+    if (destination == element)
+    {
+        return true;
+    }
+
+    DestroyElement(array, index);
+    memmove(destination, element, array->super.type.elementSize);
+    return true;
+}
+
+bool da_IndexOfRef(const DynamicArray_t *array, const void *element, size_t *outIndex)
+{
+    if (array == NULL || element == NULL || outIndex == NULL)
+    {
+        return false;
+    }
+
+    for (size_t i = 0; i < array->super.size; i++)
+    {
+        const void *currentElement = ELEMENT_AT(array, i);
+        const bool matches =
+            array->super.type.compare != NULL
+                ? array->super.type.compare(currentElement, element) == 0
+                : memcmp(currentElement, element, array->super.type.elementSize) == 0;
+
+        if (matches)
+        {
+            *outIndex = i;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool da_ContainsRef(const DynamicArray_t *array, const void *element)
+{
+    if (array == NULL || element == NULL)
+    {
+        return false;
+    }
+
+    size_t index = 0;
+    return da_IndexOfRef(array, element, &index);
+}
+
+bool da_InsertRef(DynamicArray_t *array, size_t index, const void *element)
+{
+    if (array == NULL ||
+        element == NULL ||
+        index > array->super.size ||
+        array->super.size == SIZE_MAX)
+    {
+        return false;
+    }
+
+    void *elementCopy = NULL;
+    const void *source = element;
+
+    if (PointsIntoStorage(array, element))
+    {
+        elementCopy = malloc(array->super.type.elementSize);
+        if (elementCopy == NULL)
+        {
+            return false;
+        }
+
+        memcpy(elementCopy, element, array->super.type.elementSize);
+        source = elementCopy;
+    }
+
+    if (!EnsureCapacity(array, array->super.size + 1))
+    {
+        free(elementCopy);
+        return false;
+    }
+
+    unsigned char *dest = ELEMENT_AT(array, index + 1);
+    size_t elementsToMove = array->super.size - index;
+
+    if (elementsToMove > 0)
+    {
+        memmove(dest,
+                ELEMENT_AT(array, index),
+                elementsToMove * array->super.type.elementSize);
+    }
+
+    memcpy(ELEMENT_AT(array, index), source, array->super.type.elementSize);
+    array->super.size++;
+
+    free(elementCopy);
+    return true;
+}
+
+bool da_PrependRef(DynamicArray_t *array, const void *element)
+{
+    if (array == NULL || element == NULL)
+    {
+        return false;
+    }
+
+    return da_InsertRef(array, 0, element);
+}
+
+bool da_AppendRef(DynamicArray_t *array, const void *element)
+{
+    if (array == NULL || element == NULL)
+    {
+        return false;
+    }
+
+    return da_InsertRef(array, array->super.size, element);
+}
+
+#define ADT_PRIMITIVE(Suffix, Type)                                                       \
+    bool da_IndexOf##Suffix(const DynamicArray_t *array, Type element, size_t *outIndex)  \
+    {                                                                                     \
+        return array != NULL &&                                                           \
+               array->super.type.elementSize == sizeof(Type) &&                           \
+               da_IndexOfRef(array, &element, outIndex);                                  \
+    }                                                                                     \
+                                                                                          \
+    bool da_Contains##Suffix(const DynamicArray_t *array, Type element)                   \
+    {                                                                                     \
+        return array != NULL &&                                                           \
+               array->super.type.elementSize == sizeof(Type) &&                           \
+               da_ContainsRef(array, &element);                                           \
+    }                                                                                     \
+                                                                                          \
+    bool da_Set##Suffix(DynamicArray_t *array, size_t index, Type element)                \
+    {                                                                                     \
+        return array != NULL &&                                                           \
+               array->super.type.elementSize == sizeof(Type) &&                           \
+               da_SetRef(array, index, &element);                                         \
+    }                                                                                     \
+                                                                                          \
+    bool da_Insert##Suffix(DynamicArray_t *array, size_t index, Type element)             \
+    {                                                                                     \
+        return array != NULL &&                                                           \
+               array->super.type.elementSize == sizeof(Type) &&                           \
+               da_InsertRef(array, index, &element);                                      \
+    }                                                                                     \
+                                                                                          \
+    bool da_Prepend##Suffix(DynamicArray_t *array, Type element)                          \
+    {                                                                                     \
+        return array != NULL &&                                                           \
+               array->super.type.elementSize == sizeof(Type) &&                           \
+               da_PrependRef(array, &element);                                            \
+    }                                                                                     \
+                                                                                          \
+    bool da_Append##Suffix(DynamicArray_t *array, Type element)                           \
+    {                                                                                     \
+        return array != NULL &&                                                           \
+               array->super.type.elementSize == sizeof(Type) &&                           \
+               da_AppendRef(array, &element);                                             \
+    }
+ADT_FOR_EACH_PRIMITIVE(ADT_PRIMITIVE)
+#undef ADT_PRIMITIVE
+
+bool da_Remove(DynamicArray_t *array, size_t index)
+{
+    if (array == NULL || index >= array->super.size)
+    {
+        return false;
+    }
+
+    DestroyElement(array, index);
+    CloseGap(array, index);
+    return true;
+}
+
+bool da_Take(DynamicArray_t *array, size_t index, void *outElement)
+{
+    if (array == NULL ||
+        outElement == NULL ||
+        index >= array->super.size ||
+        PointsIntoStorage(array, outElement))
+    {
+        return false;
+    }
+
+    memmove(outElement, ELEMENT_AT(array, index), array->super.type.elementSize);
+    CloseGap(array, index);
+    return true;
+}
+
+void da_Clear(DynamicArray_t *array)
+{
+    if (array == NULL)
+    {
+        return;
+    }
+
+    for (size_t i = 0; i < array->super.size; i++)
+    {
+        DestroyElement(array, i);
+    }
+
+    array->super.size = 0;
+}
+
+void da_Destroy(DynamicArray_t *array)
+{
+    if (array == NULL)
+    {
+        return;
+    }
+
+    da_Clear(array);
+
+    free(array->data);
+
+    array->super = (ADT_Super_t){0};
+    array->data = NULL;
+    array->capacity = 0;
 }

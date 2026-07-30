@@ -1,2 +1,73 @@
 # libadt
-Abstract data type library in C for Programming Languages (CS3003) final project
+
+A generic C23 abstract data type library for the CS3003 Programming Languages
+final project. It demonstrates encapsulation, runtime polymorphism, generic
+programming, and resource ownership in an imperative language.
+
+## Containers
+
+- `DynamicArray_t`: resizable contiguous storage.
+- `LinkedList_t`: doubly linked storage.
+- Stack and queue adapters are planned.
+
+Both containers begin with `ADT_Super_t`. Shared functions accept `ADT_t *` and
+dispatch traversal through `ADT_VTable_t`, allowing the same call to work with
+either container:
+
+```c
+adt_Print(&container);
+adt_Min(&container, &minimum);
+adt_Max(&container, &maximum);
+adt_Sort(&container, ADT_SORT_QUICK);
+```
+
+## Runtime type information
+
+`ADT_TypeInfo_t` describes each stored element:
+
+- `elementSize` controls storage and copying.
+- `compare` defines equality and ordering.
+- `print` defines element output.
+- `destroy` releases resources owned by an element.
+
+Containers own their element storage. Operations make shallow element copies.
+A configured destroy callback releases only resources owned by an element.
+`Remove` destroys those resources, while `Take` transfers them to the caller.
+
+C23 initialization and primitive value wrappers keep common calls concise:
+
+```c
+int values[] = {3, 1, 2};
+DynamicArray_t array = {0};
+LinkedList_t list = {0};
+
+DA_INIT_FROM(&array, values);
+LL_INIT(&list, int);
+ll_AppendValue(&list, 4);
+```
+
+Custom types use the `Ref` APIs with the address of their element storage.
+
+## Sorting
+
+The shared sorting API supports:
+
+- Bubble sort
+- Selection sort
+- Insertion sort
+- Quick sort
+- Bounded bogo sort
+
+`adt_Sort` uses the configured comparator. `adt_SortBy` accepts an override for
+alternate orderings of the same type.
+
+## Build and test
+
+```sh
+make build
+make test
+make sanitize
+```
+
+The test suite uses CppUTest and includes C23 compile checks for `_Generic`
+dispatch. Examples are documented in [`examples/README.md`](examples/README.md).
