@@ -7,7 +7,7 @@
 typedef struct
 {
     unsigned char *buffer;
-    size_t elementSize;
+    size_t stride;
 } SortBufferContext_t;
 
 typedef bool (*SortBufferFn_t)(unsigned char *buffer, size_t count, size_t elementSize, CompareFn_t compare, void *tmp);
@@ -15,13 +15,13 @@ typedef bool (*SortBufferFn_t)(unsigned char *buffer, size_t count, size_t eleme
 static void CopyToBuffer(const void *element, size_t index, void *context)
 {
     SortBufferContext_t *sort = (SortBufferContext_t *)context;
-    memcpy(sort->buffer + index * sort->elementSize, element, sort->elementSize);
+    memcpy(sort->buffer + index * sort->stride, element, sort->stride);
 }
 
 static void CopyFromBuffer(void *element, size_t index, void *context)
 {
     SortBufferContext_t *sort = (SortBufferContext_t *)context;
-    memcpy(element, sort->buffer + index * sort->elementSize, sort->elementSize);
+    memcpy(element, sort->buffer + index * sort->stride, sort->stride);
 }
 
 static unsigned char *BufferElement(unsigned char *buffer, size_t index, size_t elementSize)
@@ -322,7 +322,7 @@ bool adt_SortBy(ADT_t *adt, ADT_SortAlgorithm_t algorithm, CompareFn_t compare)
 
     SortBufferContext_t context = {
         .buffer = buffer,
-        .elementSize = super->type.elementSize};
+        .stride = super->type.elementSize};
 
     if (!adt_ForEach(adt, CopyToBuffer, &context))
     {

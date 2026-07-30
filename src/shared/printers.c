@@ -4,7 +4,8 @@
 
 void PrintChar(const void *element)
 {
-    printf("%c", *(const char *)element);
+    const char value = *(const char *)element;
+    printf("%c", value);
 }
 
 void PrintInt(const void *element)

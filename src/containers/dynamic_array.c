@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define DA_INITIAL_CAPACITY 8
+#define DYNAMIC_ARRAY_INITIAL_CAPACITY 8
 
 #define ELEMENT_AT(array, index) \
     ((unsigned char *)(array)->data + (index) * (array)->super.type.elementSize)
@@ -96,7 +96,7 @@ static bool EnsureCapacity(DynamicArray_t *array, size_t requiredCapacity)
         return true;
     }
 
-    size_t newCapacity = array->capacity == 0 ? DA_INITIAL_CAPACITY : array->capacity;
+    size_t newCapacity = array->capacity == 0 ? DYNAMIC_ARRAY_INITIAL_CAPACITY : array->capacity;
     while (newCapacity < requiredCapacity)
     {
         if (newCapacity > SIZE_MAX / 2)
@@ -132,12 +132,12 @@ bool da_Init(DynamicArray_t *array, ADT_TypeInfo_t typeInfo)
         return false;
     }
 
-    if (DA_INITIAL_CAPACITY > SIZE_MAX / typeInfo.elementSize)
+    if (DYNAMIC_ARRAY_INITIAL_CAPACITY > SIZE_MAX / typeInfo.elementSize)
     {
         return false;
     }
 
-    void *data = malloc(DA_INITIAL_CAPACITY * typeInfo.elementSize);
+    void *data = malloc(DYNAMIC_ARRAY_INITIAL_CAPACITY * typeInfo.elementSize);
 
     if (data == NULL)
     {
@@ -149,7 +149,7 @@ bool da_Init(DynamicArray_t *array, ADT_TypeInfo_t typeInfo)
         .size = 0,
         .type = typeInfo};
     array->data = data;
-    array->capacity = DA_INITIAL_CAPACITY;
+    array->capacity = DYNAMIC_ARRAY_INITIAL_CAPACITY;
 
     return true;
 }
@@ -166,7 +166,7 @@ bool da_InitFrom(DynamicArray_t *array, const void *elements, size_t initialCoun
         return initialCount > 0 ? false : da_Init(array, typeInfo);
     }
 
-    size_t capacity = DA_INITIAL_CAPACITY;
+    size_t capacity = DYNAMIC_ARRAY_INITIAL_CAPACITY;
     while (capacity < initialCount)
     {
         if (capacity > SIZE_MAX / 2)
@@ -336,51 +336,6 @@ bool da_AppendRef(DynamicArray_t *array, const void *element)
 
     return da_InsertRef(array, array->super.size, element);
 }
-
-#define ADT_PRIMITIVE(Suffix, Type)                                                       \
-    bool da_IndexOf##Suffix(const DynamicArray_t *array, Type element, size_t *outIndex)  \
-    {                                                                                     \
-        return array != NULL &&                                                           \
-               array->super.type.elementSize == sizeof(Type) &&                           \
-               da_IndexOfRef(array, &element, outIndex);                                  \
-    }                                                                                     \
-                                                                                          \
-    bool da_Contains##Suffix(const DynamicArray_t *array, Type element)                   \
-    {                                                                                     \
-        return array != NULL &&                                                           \
-               array->super.type.elementSize == sizeof(Type) &&                           \
-               da_ContainsRef(array, &element);                                           \
-    }                                                                                     \
-                                                                                          \
-    bool da_Set##Suffix(DynamicArray_t *array, size_t index, Type element)                \
-    {                                                                                     \
-        return array != NULL &&                                                           \
-               array->super.type.elementSize == sizeof(Type) &&                           \
-               da_SetRef(array, index, &element);                                         \
-    }                                                                                     \
-                                                                                          \
-    bool da_Insert##Suffix(DynamicArray_t *array, size_t index, Type element)             \
-    {                                                                                     \
-        return array != NULL &&                                                           \
-               array->super.type.elementSize == sizeof(Type) &&                           \
-               da_InsertRef(array, index, &element);                                      \
-    }                                                                                     \
-                                                                                          \
-    bool da_Prepend##Suffix(DynamicArray_t *array, Type element)                          \
-    {                                                                                     \
-        return array != NULL &&                                                           \
-               array->super.type.elementSize == sizeof(Type) &&                           \
-               da_PrependRef(array, &element);                                            \
-    }                                                                                     \
-                                                                                          \
-    bool da_Append##Suffix(DynamicArray_t *array, Type element)                           \
-    {                                                                                     \
-        return array != NULL &&                                                           \
-               array->super.type.elementSize == sizeof(Type) &&                           \
-               da_AppendRef(array, &element);                                             \
-    }
-ADT_FOR_EACH_PRIMITIVE(ADT_PRIMITIVE)
-#undef ADT_PRIMITIVE
 
 bool da_Remove(DynamicArray_t *array, size_t index)
 {

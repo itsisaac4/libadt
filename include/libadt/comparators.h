@@ -75,21 +75,4 @@ extern "C"
 }
 #endif
 
-#ifndef __cplusplus
-/**
- * @brief Selects the built-in comparator for a C type.
- * @param type Element type.
- * @return Its CompareFn_t, or NULL for an unsupported type.
- */
-#define COMPARATOR(type)                    \
-    _Generic(((type *)0),                   \
-        char *: CompareChar,                \
-        int *: CompareInt,                  \
-        unsigned int *: CompareUnsignedInt, \
-        long *: CompareLong,                \
-        float *: CompareFloat,              \
-        double *: CompareDouble,            \
-        default: ((CompareFn_t)0))
-#endif
-
 #endif

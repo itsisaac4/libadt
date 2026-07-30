@@ -6,13 +6,15 @@ CPPFLAGS += -I$(PROJECT_ROOT)/include
 CFLAGS ?= -std=c23 -Wall -Wextra -Wpedantic -Werror -g
 
 LIBADT_SOURCES ?= \
-	$(PROJECT_ROOT)/src/abstract_data_type.c \
-	$(PROJECT_ROOT)/src/statistics.c \
-	$(PROJECT_ROOT)/src/sorting.c \
-	$(PROJECT_ROOT)/src/dynamic_array.c \
-	$(PROJECT_ROOT)/src/linked_list.c \
-	$(PROJECT_ROOT)/src/comparators.c \
-	$(PROJECT_ROOT)/src/printers.c
+	$(PROJECT_ROOT)/src/shared/abstract_data_type.c \
+	$(PROJECT_ROOT)/src/shared/statistics.c \
+	$(PROJECT_ROOT)/src/shared/sorting.c \
+	$(PROJECT_ROOT)/src/shared/comparators.c \
+	$(PROJECT_ROOT)/src/shared/printers.c \
+	$(PROJECT_ROOT)/src/containers/dynamic_array.c \
+	$(PROJECT_ROOT)/src/containers/dynamic_array_primitives.c \
+	$(PROJECT_ROOT)/src/containers/linked_list.c \
+	$(PROJECT_ROOT)/src/containers/linked_list_primitives.c
 
 COMMON_DIR := common
 COMMON_BUILD_DIR := $(BUILD_DIR)/common

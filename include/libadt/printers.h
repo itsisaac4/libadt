@@ -66,21 +66,4 @@ extern "C"
 }
 #endif
 
-#ifndef __cplusplus
-/**
- * @brief Selects the built-in printer for a C type.
- * @param type Element type.
- * @return Its PrintFn_t, or NULL for an unsupported type.
- */
-#define PRINTER(type)                     \
-    _Generic(((type *)0),                 \
-        char *: PrintChar,                \
-        int *: PrintInt,                  \
-        unsigned int *: PrintUnsignedInt, \
-        long *: PrintLong,                \
-        float *: PrintFloat,              \
-        double *: PrintDouble,            \
-        default: ((PrintFn_t)0))
-#endif
-
 #endif

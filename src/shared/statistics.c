@@ -12,7 +12,7 @@ typedef struct
 {
     CompareFn_t compare;
     const void *selected;
-    Extremum_t extremum;
+    Extremum_t kind;
 } ExtremumContext_t;
 
 static void FindExtremum(const void *element, size_t index, void *context)
@@ -29,8 +29,8 @@ static void FindExtremum(const void *element, size_t index, void *context)
 
     int comparison = extremum->compare(element, extremum->selected);
 
-    if ((extremum->extremum == EXTREMUM_MINIMUM && comparison < 0) ||
-        (extremum->extremum == EXTREMUM_MAXIMUM && comparison > 0))
+    if ((extremum->kind == EXTREMUM_MINIMUM && comparison < 0) ||
+        (extremum->kind == EXTREMUM_MAXIMUM && comparison > 0))
     {
         extremum->selected = element;
     }
@@ -52,7 +52,7 @@ static bool CopyExtremum(const ADT_t *adt, CompareFn_t compare, void *outElement
     ExtremumContext_t context = {
         .compare = compare,
         .selected = NULL,
-        .extremum = extremum};
+        .kind = extremum};
 
     if (!adt_ForEach(adt, FindExtremum, &context) ||
         context.selected == NULL)

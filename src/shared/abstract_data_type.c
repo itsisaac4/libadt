@@ -5,7 +5,7 @@
 typedef struct
 {
     PrintFn_t print;
-    bool first;
+    bool firstElement;
 } PrintContext_t;
 
 static void PrintElement(const void *element, size_t index, void *context)
@@ -14,13 +14,13 @@ static void PrintElement(const void *element, size_t index, void *context)
 
     PrintContext_t *printContext = (PrintContext_t *)context;
 
-    if (!printContext->first)
+    if (!printContext->firstElement)
     {
         printf(", ");
     }
 
     printContext->print(element);
-    printContext->first = false;
+    printContext->firstElement = false;
 }
 
 bool adt_ForEach(const ADT_t *adt, ADT_ConstVisitFn_t visitor, void *context)
@@ -64,7 +64,7 @@ bool adt_Print(const ADT_t *adt)
 
     PrintContext_t context = {
         .print = super->type.print,
-        .first = true};
+        .firstElement = true};
 
     printf("%s (size: %zu): [", super->vtable->containerName, super->size);
     adt_ForEach(adt, PrintElement, &context);
@@ -114,7 +114,7 @@ void adt_PrintDebug(const ADT_t *adt, const char *expression, const char *file, 
 
     PrintContext_t context = {
         .print = super->type.print,
-        .first = true};
+        .firstElement = true};
 
     printf("[");
     super->vtable->visit(super, PrintElement, &context);

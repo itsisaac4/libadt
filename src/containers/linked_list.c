@@ -42,7 +42,7 @@ static void VisitMutableElements(ADT_Super_t *adt, ADT_MutableVisitFn_t visitor,
     }
 }
 
-static const ADT_VTable_t LL_VTABLE = {
+static const ADT_VTable_t LINKED_LIST_VTABLE = {
     .containerName = "LinkedList",
     .visit = VisitElements,
     .visitMutable = VisitMutableElements};
@@ -168,7 +168,7 @@ bool ll_Init(LinkedList_t *list, ADT_TypeInfo_t typeInfo)
     }
 
     list->super = (ADT_Super_t){
-        .vtable = &LL_VTABLE,
+        .vtable = &LINKED_LIST_VTABLE,
         .size = 0,
         .type = typeInfo};
     list->head = NULL;
@@ -377,51 +377,6 @@ bool ll_AppendRef(LinkedList_t *list, const void *element)
 
     return true;
 }
-
-#define ADT_PRIMITIVE(Suffix, Type)                                                    \
-    bool ll_IndexOf##Suffix(const LinkedList_t *list, Type element, size_t *outIndex)  \
-    {                                                                                  \
-        return list != NULL &&                                                         \
-               list->super.type.elementSize == sizeof(Type) &&                         \
-               ll_IndexOfRef(list, &element, outIndex);                                \
-    }                                                                                  \
-                                                                                       \
-    bool ll_Contains##Suffix(const LinkedList_t *list, Type element)                   \
-    {                                                                                  \
-        return list != NULL &&                                                         \
-               list->super.type.elementSize == sizeof(Type) &&                         \
-               ll_ContainsRef(list, &element);                                         \
-    }                                                                                  \
-                                                                                       \
-    bool ll_Set##Suffix(LinkedList_t *list, size_t index, Type element)                \
-    {                                                                                  \
-        return list != NULL &&                                                         \
-               list->super.type.elementSize == sizeof(Type) &&                         \
-               ll_SetRef(list, index, &element);                                       \
-    }                                                                                  \
-                                                                                       \
-    bool ll_Insert##Suffix(LinkedList_t *list, size_t index, Type element)             \
-    {                                                                                  \
-        return list != NULL &&                                                         \
-               list->super.type.elementSize == sizeof(Type) &&                         \
-               ll_InsertRef(list, index, &element);                                    \
-    }                                                                                  \
-                                                                                       \
-    bool ll_Prepend##Suffix(LinkedList_t *list, Type element)                          \
-    {                                                                                  \
-        return list != NULL &&                                                         \
-               list->super.type.elementSize == sizeof(Type) &&                         \
-               ll_PrependRef(list, &element);                                          \
-    }                                                                                  \
-                                                                                       \
-    bool ll_Append##Suffix(LinkedList_t *list, Type element)                           \
-    {                                                                                  \
-        return list != NULL &&                                                         \
-               list->super.type.elementSize == sizeof(Type) &&                         \
-               ll_AppendRef(list, &element);                                           \
-    }
-ADT_FOR_EACH_PRIMITIVE(ADT_PRIMITIVE)
-#undef ADT_PRIMITIVE
 
 bool ll_Remove(LinkedList_t *list, size_t index)
 {

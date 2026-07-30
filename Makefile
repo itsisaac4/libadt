@@ -9,11 +9,12 @@ INCLUDES := -Iinclude
 BUILD_DIR := build
 SRC_DIR := src
 TEST_DIR := tests
+SRC_DIRS := $(SRC_DIR)/shared $(SRC_DIR)/containers
 
 TARGET := $(BUILD_DIR)/libcollections
 TEST_TARGET := $(BUILD_DIR)/run_tests
 
-C_SOURCES := $(wildcard $(SRC_DIR)/*.c)
+C_SOURCES := $(foreach dir,$(SRC_DIRS),$(wildcard $(dir)/*.c))
 C_OBJECTS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(C_SOURCES))
 
 MAIN_OBJECT := $(BUILD_DIR)/main.o
@@ -41,7 +42,7 @@ $(BUILD_DIR)/main.o: main.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
-	@mkdir -p $(BUILD_DIR)
+	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 run: build

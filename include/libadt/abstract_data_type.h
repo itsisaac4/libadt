@@ -248,45 +248,4 @@ extern "C"
 #define ADT_DEBUG(adt) \
     adt_PrintDebug(&(adt), #adt, __FILE__, __LINE__)
 
-/**
- * @brief Applies a macro to every supported primitive.
- * @param Apply Macro accepting `(Suffix, Type)`.
- * @return The combined macro expansions.
- */
-#define ADT_FOR_EACH_PRIMITIVE(Apply) \
-    ADT_DETAIL_FOR_EACH_PRIMITIVE(ADT_DETAIL_APPLY_PRIMITIVE, Apply)
-
-#define ADT_DETAIL_FOR_EACH_PRIMITIVE(Apply, Context) \
-    Apply(Context, Char, char)                        \
-    Apply(Context, Int, int)                          \
-    Apply(Context, UnsignedInt, unsigned int)         \
-    Apply(Context, Long, long)                        \
-    Apply(Context, Float, float)                      \
-    Apply(Context, Double, double)
-
-#define ADT_DETAIL_APPLY_PRIMITIVE(Apply, Suffix, Type) \
-    Apply(Suffix, Type)
-
-#ifndef __cplusplus
-#define ADT_DETAIL_JOIN_RAW(First, Second) First##Second
-#define ADT_DETAIL_JOIN(First, Second) \
-    ADT_DETAIL_JOIN_RAW(First, Second)
-
-#define ADT_DETAIL_PRIMITIVE_ASSOCIATION(Prefix, Suffix, Type) \
-    Type: ADT_DETAIL_JOIN(Prefix, Suffix),
-
-/**
- * @brief Selects a primitive function from a value's C type.
- * @param Prefix Shared function-name prefix.
- * @param Value Primitive value expression.
- * @return The selected function.
- */
-#define ADT_SELECT_PRIMITIVE_FUNCTION(Prefix, Value) \
-    _Generic((Value),                                \
-        ADT_DETAIL_FOR_EACH_PRIMITIVE(               \
-            ADT_DETAIL_PRIMITIVE_ASSOCIATION,         \
-            Prefix)                                  \
-        default: ((void *)0))
-#endif
-
 #endif

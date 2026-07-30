@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include "abstract_data_type.h"
+#include "primitive_dispatch.h"
 
 #ifdef __cplusplus
 extern "C"

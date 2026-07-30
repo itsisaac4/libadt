@@ -4,10 +4,10 @@
 
 int CompareChar(const void *first, const void *second)
 {
-    const char a = *(const char *)first;
-    const char b = *(const char *)second;
+    const char left = *(const char *)first;
+    const char right = *(const char *)second;
 
-    return (a > b) - (a < b);
+    return (left > right) - (left < right);
 }
 
 int CompareInt(const void *first, const void *second)
