@@ -41,8 +41,8 @@ static bool CopyExtremum(const ADT_t *adt, CompareFn_t compare, void *outElement
     const ADT_Super_t *super = (const ADT_Super_t *)adt;
 
     if (super == NULL ||
-        super->size == 0 ||
-        super->type.elementSize == 0 ||
+        super->_private.size == 0 ||
+        super->_private.type.elementSize == 0 ||
         compare == NULL ||
         outElement == NULL)
     {
@@ -60,7 +60,7 @@ static bool CopyExtremum(const ADT_t *adt, CompareFn_t compare, void *outElement
         return false;
     }
 
-    memmove(outElement, context.selected, super->type.elementSize);
+    memmove(outElement, context.selected, super->_private.type.elementSize);
     return true;
 }
 
@@ -73,7 +73,7 @@ bool adt_Min(const ADT_t *adt, void *outElement)
         return false;
     }
 
-    return adt_MinBy(adt, super->type.compare, outElement);
+    return adt_MinBy(adt, super->_private.type.compare, outElement);
 }
 
 bool adt_MinBy(const ADT_t *adt, CompareFn_t compare, void *outElement)
@@ -90,7 +90,7 @@ bool adt_Max(const ADT_t *adt, void *outElement)
         return false;
     }
 
-    return adt_MaxBy(adt, super->type.compare, outElement);
+    return adt_MaxBy(adt, super->_private.type.compare, outElement);
 }
 
 bool adt_MaxBy(const ADT_t *adt, CompareFn_t compare, void *outElement)

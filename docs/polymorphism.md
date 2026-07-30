@@ -11,8 +11,11 @@ structure with a vtable.
 typedef struct
 {
     ADT_Super_t super;
-    void *data;
-    size_t capacity;
+    struct
+    {
+        void *data;
+        size_t capacity;
+    } _private;
 } DynamicArray_t;
 ```
 
@@ -20,8 +23,11 @@ typedef struct
 typedef struct
 {
     ADT_Super_t super;
-    LinkedListNode_t *head;
-    LinkedListNode_t *tail;
+    struct
+    {
+        LinkedListNode_t *head;
+        LinkedListNode_t *tail;
+    } _private;
 } LinkedList_t;
 ```
 
@@ -30,7 +36,14 @@ offset zero. Therefore, a pointer to either complete container has the same
 address as its `ADT_Super_t`.
 
 Shared functions accept the opaque `ADT_t` parameter type and inspect only the
-common leading state.
+common leading state. Shared metadata and representation-specific fields are
+grouped under `_private`; use `adt_Size()` and `adt_Type()` to inspect public
+metadata.
+
+The `_private` name documents an unsafe boundary rather than enforcing one,
+because C does not support private structure members. Linked-list nodes use a
+public forward declaration while their complete definition remains in an
+internal detail header.
 
 ## Traversal vtable
 
@@ -80,7 +93,7 @@ keeps sorting independent of the container's physical representation.
 
 ## Concrete operations stay concrete
 
-Operations such as `da_AppendRef` and `ll_InsertRef` are not part of
+Operations such as `da_Append` and `ll_Insert` are not part of
 `ADT_Super_t`. They describe sequence storage, not behavior guaranteed for
 every future ADT.
 
@@ -89,9 +102,9 @@ A stack should expose `push`, `pop`, and `peek`; a queue should expose
 vtable prevents unsupported base operations and unnecessary `NULL` function
 pointers.
 
-Primitive wrappers follow the same rule. The primitive type registry and size
-validation are shared, but each concrete ADT explicitly defines which
-pass-by-value operations it supports.
+Generic wrappers follow the same rule. Primitive values are dispatched by
+their C type, while custom values use the same operation name with an address.
+Each concrete ADT explicitly defines which element operations it supports.
 
 ## Adding another container
 
@@ -100,8 +113,8 @@ A new polymorphic container must:
 1. Place `ADT_Super_t` first.
 2. Provide read-only and mutable traversal functions.
 3. Define a static `ADT_VTable_t`.
-4. Initialize `super.vtable`, `super.size`, and `super.type`.
-5. Maintain `super.size` as elements are added and removed.
+4. Initialize the private vtable, size, and type fields in `super`.
+5. Maintain the private size field as elements are added and removed.
 6. Follow the same shallow-copy and destroy-callback ownership contract.
 
 The new container can then use shared printing, extrema, and sorting without

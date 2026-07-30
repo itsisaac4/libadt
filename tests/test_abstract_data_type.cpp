@@ -158,8 +158,8 @@ TEST(AbstractDataType, SharedSizeTracksContainerOperations)
 
     CHECK_TRUE(da_Init(&array, type));
     CHECK_TRUE(ll_Init(&list, type));
-    CHECK_TRUE(da_AppendRef(&array, &value));
-    CHECK_TRUE(ll_AppendRef(&list, &value));
+    CHECK_TRUE(da_detail_AppendRef(&array, &value));
+    CHECK_TRUE(ll_detail_AppendRef(&list, &value));
 
     UNSIGNED_LONGS_EQUAL(1, adt_Size(&array.super));
     UNSIGNED_LONGS_EQUAL(1, adt_Size(&list.super));
@@ -186,11 +186,11 @@ TEST(AbstractDataType, DynamicArrayVTableProvidesReadOnlyTraversal)
     VisitContext_t visit = {};
 
     CHECK_TRUE(da_InitFrom(&array, values, 3, type));
-    CHECK(array.super.vtable != NULL);
-    STRCMP_EQUAL("DynamicArray", array.super.vtable->containerName);
-    CHECK(array.super.vtable->visit != NULL);
+    CHECK(array.super._private.vtable != NULL);
+    STRCMP_EQUAL("DynamicArray", array.super._private.vtable->containerName);
+    CHECK(array.super._private.vtable->visit != NULL);
 
-    array.super.vtable->visit(&array.super, CollectInt, &visit);
+    array.super._private.vtable->visit(&array.super, CollectInt, &visit);
 
     UNSIGNED_LONGS_EQUAL(3, visit.count);
     for (size_t i = 0; i < visit.count; i++)
@@ -214,13 +214,13 @@ TEST(AbstractDataType, DynamicArrayVTableProvidesMutableTraversal)
     size_t visits = 0;
 
     CHECK_TRUE(da_InitFrom(&array, values, 3, type));
-    CHECK(array.super.vtable != NULL);
-    CHECK(array.super.vtable->visitMutable != NULL);
+    CHECK(array.super._private.vtable != NULL);
+    CHECK(array.super._private.vtable->visitMutable != NULL);
 
-    array.super.vtable->visitMutable(&array.super, AddIndexToInt, &visits);
+    array.super._private.vtable->visitMutable(&array.super, AddIndexToInt, &visits);
 
     UNSIGNED_LONGS_EQUAL(3, visits);
-    for (size_t i = 0; i < array.super.size; i++)
+    for (size_t i = 0; i < array.super._private.size; i++)
     {
         int actual = 0;
         CHECK_TRUE(da_Get(&array, i, &actual));
@@ -242,11 +242,11 @@ TEST(AbstractDataType, LinkedListVTableProvidesReadOnlyTraversal)
     VisitContext_t visit = {};
 
     CHECK_TRUE(ll_InitFrom(&list, values, 3, type));
-    CHECK(list.super.vtable != NULL);
-    STRCMP_EQUAL("LinkedList", list.super.vtable->containerName);
-    CHECK(list.super.vtable->visit != NULL);
+    CHECK(list.super._private.vtable != NULL);
+    STRCMP_EQUAL("LinkedList", list.super._private.vtable->containerName);
+    CHECK(list.super._private.vtable->visit != NULL);
 
-    list.super.vtable->visit(&list.super, CollectInt, &visit);
+    list.super._private.vtable->visit(&list.super, CollectInt, &visit);
 
     UNSIGNED_LONGS_EQUAL(3, visit.count);
     for (size_t i = 0; i < visit.count; i++)
@@ -270,13 +270,13 @@ TEST(AbstractDataType, LinkedListVTableProvidesMutableTraversal)
     size_t visits = 0;
 
     CHECK_TRUE(ll_InitFrom(&list, values, 3, type));
-    CHECK(list.super.vtable != NULL);
-    CHECK(list.super.vtable->visitMutable != NULL);
+    CHECK(list.super._private.vtable != NULL);
+    CHECK(list.super._private.vtable->visitMutable != NULL);
 
-    list.super.vtable->visitMutable(&list.super, AddIndexToInt, &visits);
+    list.super._private.vtable->visitMutable(&list.super, AddIndexToInt, &visits);
 
     UNSIGNED_LONGS_EQUAL(3, visits);
-    for (size_t i = 0; i < list.super.size; i++)
+    for (size_t i = 0; i < list.super._private.size; i++)
     {
         int actual = 0;
         CHECK_TRUE(ll_Get(&list, i, &actual));
@@ -561,8 +561,8 @@ TEST(AbstractDataType, MinimumSupportsOverlappingOutputStorage)
     DynamicArray_t array = {};
 
     CHECK_TRUE(da_InitFrom(&array, values, 3, type));
-    CHECK_TRUE(adt_Min(&array, array.data));
-    LONGS_EQUAL(1, static_cast<int *>(array.data)[0]);
+    CHECK_TRUE(adt_Min(&array, array._private.data));
+    LONGS_EQUAL(1, static_cast<int *>(array._private.data)[0]);
 
     da_Destroy(&array);
 }
@@ -665,8 +665,8 @@ TEST(AbstractDataType, MaximumSupportsOverlappingOutputStorage)
     DynamicArray_t array = {};
 
     CHECK_TRUE(da_InitFrom(&array, values, 3, type));
-    CHECK_TRUE(adt_Max(&array, array.data));
-    LONGS_EQUAL(9, static_cast<int *>(array.data)[0]);
+    CHECK_TRUE(adt_Max(&array, array._private.data));
+    LONGS_EQUAL(9, static_cast<int *>(array._private.data)[0]);
 
     da_Destroy(&array);
 }

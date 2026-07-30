@@ -27,12 +27,12 @@ bool adt_ForEach(const ADT_t *adt, ADT_ConstVisitFn_t visitor, void *context)
 {
     const ADT_Super_t *super = (const ADT_Super_t *)adt;
 
-    if (super == NULL || super->vtable == NULL || super->vtable->visit == NULL || visitor == NULL)
+    if (super == NULL || super->_private.vtable == NULL || super->_private.vtable->visit == NULL || visitor == NULL)
     {
         return false;
     }
 
-    super->vtable->visit(super, visitor, context);
+    super->_private.vtable->visit(super, visitor, context);
     return true;
 }
 
@@ -40,12 +40,12 @@ bool adt_ForEachMutable(ADT_t *adt, ADT_MutableVisitFn_t visitor, void *context)
 {
     ADT_Super_t *super = (ADT_Super_t *)adt;
 
-    if (super == NULL || super->vtable == NULL || super->vtable->visitMutable == NULL || visitor == NULL)
+    if (super == NULL || super->_private.vtable == NULL || super->_private.vtable->visitMutable == NULL || visitor == NULL)
     {
         return false;
     }
 
-    super->vtable->visitMutable(super, visitor, context);
+    super->_private.vtable->visitMutable(super, visitor, context);
     return true;
 }
 
@@ -54,19 +54,19 @@ bool adt_Print(const ADT_t *adt)
     const ADT_Super_t *super = (const ADT_Super_t *)adt;
 
     if (super == NULL ||
-        super->vtable == NULL ||
-        super->vtable->containerName == NULL ||
-        super->vtable->visit == NULL ||
-        super->type.print == NULL)
+        super->_private.vtable == NULL ||
+        super->_private.vtable->containerName == NULL ||
+        super->_private.vtable->visit == NULL ||
+        super->_private.type.print == NULL)
     {
         return false;
     }
 
     PrintContext_t context = {
-        .print = super->type.print,
+        .print = super->_private.type.print,
         .firstElement = true};
 
-    printf("%s (size: %zu): [", super->vtable->containerName, super->size);
+    printf("%s (size: %zu): [", super->_private.vtable->containerName, super->_private.size);
     adt_ForEach(adt, PrintElement, &context);
     printf("]\n");
 
@@ -90,33 +90,33 @@ void adt_PrintDebug(const ADT_t *adt, const char *expression, const char *file, 
 
     printf(
         "  container: %s\n",
-        super->vtable == NULL || super->vtable->containerName == NULL
+        super->_private.vtable == NULL || super->_private.vtable->containerName == NULL
             ? "<uninitialized>"
-            : super->vtable->containerName);
-    printf("  size: %zu\n", super->size);
-    printf("  element size: %zu\n", super->type.elementSize);
-    printf("  comparator: %s\n", super->type.compare == NULL ? "NULL" : "set");
-    printf("  printer: %s\n", super->type.print == NULL ? "NULL" : "set");
-    printf("  destructor: %s\n", super->type.destroy == NULL ? "NULL" : "set");
+            : super->_private.vtable->containerName);
+    printf("  size: %zu\n", super->_private.size);
+    printf("  element size: %zu\n", super->_private.type.elementSize);
+    printf("  comparator: %s\n", super->_private.type.compare == NULL ? "NULL" : "set");
+    printf("  printer: %s\n", super->_private.type.print == NULL ? "NULL" : "set");
+    printf("  destructor: %s\n", super->_private.type.destroy == NULL ? "NULL" : "set");
     printf("  elements: ");
 
-    if (super->vtable == NULL || super->vtable->visit == NULL)
+    if (super->_private.vtable == NULL || super->_private.vtable->visit == NULL)
     {
         printf("<unavailable>\n");
         return;
     }
 
-    if (super->type.print == NULL)
+    if (super->_private.type.print == NULL)
     {
         printf("<no print function>\n");
         return;
     }
 
     PrintContext_t context = {
-        .print = super->type.print,
+        .print = super->_private.type.print,
         .firstElement = true};
 
     printf("[");
-    super->vtable->visit(super, PrintElement, &context);
+    super->_private.vtable->visit(super, PrintElement, &context);
     printf("]\n");
 }

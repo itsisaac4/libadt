@@ -54,7 +54,7 @@ static bool AppendStudent(LinkedList_t *students, int id, const char *name)
         return false;
     }
 
-    if (!ll_AppendRef(students, &student))
+    if (!ll_Append(students, &student))
     {
         free(student.name);
         return false;

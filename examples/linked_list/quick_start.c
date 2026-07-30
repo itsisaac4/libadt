@@ -9,8 +9,8 @@ int main(void)
     LinkedList_t numbers = {0};
 
     if (!LL_INIT_FROM(&numbers, values) ||
-        !ll_PrependValue(&numbers, 10) ||
-        !ll_AppendValue(&numbers, 50))
+        !ll_Prepend(&numbers, 10) ||
+        !ll_Append(&numbers, 50))
     {
         ll_Destroy(&numbers);
         return EXIT_FAILURE;

@@ -16,7 +16,7 @@ object itself is never retained.
 
 ```c
 int value = 10;
-da_AppendRef(&array, &value);
+da_Append(&array, value);
 value = 20;
 ```
 
@@ -57,7 +57,7 @@ Student_t student = {
     .name = CopyString("Ada")
 };
 
-if (!ll_AppendRef(&students, &student))
+if (!ll_Append(&students, &student))
 {
     free(student.name);
 }
@@ -71,8 +71,8 @@ for releasing the allocation.
 
 | Operation | Resource behavior |
 | --- | --- |
-| `AppendRef`, `PrependRef`, `InsertRef` | Copies the element; on success the stored copy assumes responsibility for resources described by `destroy`. |
-| `SetRef` | Destroys resources owned by the replaced element, then stores the shallow replacement copy. |
+| `Append`, `Prepend`, `Insert` | Copies the element; on success the stored copy assumes responsibility for resources described by `destroy`. |
+| `Set` | Destroys resources owned by the replaced element, then stores the shallow replacement copy. |
 | `Get` | Returns a shallow, non-owning copy. The element remains in the container. |
 | `Min`, `Max` | Return shallow, non-owning copies. |
 | `Remove` | Destroys the removed element's resources. |
@@ -107,8 +107,8 @@ resource:
 
 ```c
 Student_t student = MakeStudent(1001, "Ada");
-ll_AppendRef(&students, &student);
-ll_AppendRef(&students, &student); /* unsafe when both copies destroy name */
+ll_Append(&students, &student);
+ll_Append(&students, &student); /* unsafe when both copies destroy name */
 ```
 
 The two stored structures would contain the same `name` pointer, causing it to

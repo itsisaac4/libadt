@@ -16,8 +16,8 @@ int main(void)
     DynamicArray_t numbers = {0};
 
     if (!DA_INIT_FROM(&numbers, values) ||
-        !da_PrependValue(&numbers, 10) ||
-        !da_AppendValue(&numbers, 50))
+        !da_Prepend(&numbers, 10) ||
+        !da_Append(&numbers, 50))
     {
         da_Destroy(&numbers);
         return EXIT_FAILURE;
@@ -37,15 +37,14 @@ Use `DA_INIT(&array, type)` for an empty primitive array and
 | Category | Functions |
 | --- | --- |
 | Initialization | `da_Init`, `da_InitFrom`, `DA_INIT`, `DA_INIT_FROM` |
-| Access | `da_Get`, `da_SetRef`, `da_SetValue` |
-| Search | `da_IndexOfRef`, `da_IndexOfValue`, `da_ContainsRef`, `da_ContainsValue` |
-| Insertion | `da_InsertRef`, `da_InsertValue`, `da_PrependRef`, `da_PrependValue`, `da_AppendRef`, `da_AppendValue` |
+| Access | `da_Get`, `da_Set` |
+| Search | `da_IndexOf`, `da_Contains` |
+| Insertion | `da_Insert`, `da_Prepend`, `da_Append` |
 | Removal | `da_Remove`, `da_Take`, `da_Clear`, `da_Destroy` |
 | Shared | `adt_Size`, `adt_IsEmpty`, `adt_Print`, `adt_Min`, `adt_Max`, `adt_Sort` |
 
-Functions ending in `Value` accept supported primitive values. Functions
-ending in `Ref` accept the address of custom, pointer, or primitive element
-storage.
+Each operation supports any type matching the array's initialized element
+type. Pass supported primitives directly and all other types by address.
 
 ## Access and removal
 
@@ -94,7 +93,7 @@ if (da_Init(&students, studentType))
 {
     Student_t student = MakeStudent(1001, "Ada");
 
-    if (!da_AppendRef(&students, &student))
+    if (!da_Append(&students, &student))
     {
         DestroyStudent(&student);
     }

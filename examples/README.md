@@ -6,7 +6,7 @@ directory, run `make list`, `make` to build everything, or one target below.
 | Target | Example | Demonstrates |
 | --- | --- | --- |
 | `make polymorphism` | `common/polymorphism.c` | One shared function printing, inspecting, and sorting either container |
-| `make dynamic-array` | `dynamic_array/quick_start.c` | Primitive value operations and lookup |
+| `make dynamic-array` | `dynamic_array/quick_start.c` | Unified element operations and lookup |
 | `make student-records` | `dynamic_array/student_records.c` | Custom type information, comparison, and printing |
 | `make debug-view` | `dynamic_array/debug_view.c` | Shared `ADT_DEBUG` output |
 | `make linked-list` | `linked_list/quick_start.c` | Typed initialization, insertion, printing, and `ll_Take` |

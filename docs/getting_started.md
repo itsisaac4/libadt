@@ -40,7 +40,7 @@ int main(void)
     DynamicArray_t numbers = {0};
 
     if (!DA_INIT_FROM(&numbers, initial) ||
-        !da_AppendValue(&numbers, 40))
+        !da_Append(&numbers, 40))
     {
         da_Destroy(&numbers);
         return EXIT_FAILURE;
@@ -61,27 +61,30 @@ call the matching destroy function when finished.
 would make `ARRAY_COUNT` calculate the size of the pointer rather than the
 number of elements.
 
-## Value and reference operations
+## Element operations
 
-Supported primitives can be passed by value:
+The same operation names accept every initialized element type. Supported
+primitives can be passed directly:
 
 ```c
-da_AppendValue(&numbers, 42);
-ll_PrependValue(&numbersList, 42);
+da_Append(&numbers, 42);
+ll_Prepend(&numbersList, 42);
 ```
 
 The supported primitive types are `char`, `int`, `unsigned int`, `long`,
 `float`, and `double`. Value dispatch uses C23 `_Generic`.
 
-Custom structures and pointer element types use the `Ref` operations:
+Pass the address of custom structures, pointer elements, function pointers, and
+other types:
 
 ```c
 Person_t person = {.id = 1001};
-da_AppendRef(&people, &person);
+da_Append(&people, &person);
 ```
 
-The container copies `sizeof(Person_t)` bytes from the supplied address. It
-does not perform a deep copy.
+The argument type must match the type used to initialize the container. The
+container copies `sizeof(Person_t)` bytes from the supplied address; it does not
+perform a deep copy.
 
 ## Shared operations
 

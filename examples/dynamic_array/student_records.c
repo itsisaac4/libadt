@@ -51,7 +51,7 @@ int main(void)
     Student_t target = {.id = 1002};
     size_t index = 0;
 
-    if (da_IndexOfRef(&students, &target, &index))
+    if (da_IndexOf(&students, &target, &index))
     {
         printf("Student %d is at index %zu.\n", target.id, index);
     }

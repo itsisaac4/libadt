@@ -43,15 +43,16 @@ extern "C"
      * @brief Stores state shared by every libadt container.
      *
      * Members:
-     * - `vtable`: Container-specific operations.
-     * - `size`: Number of stored elements.
-     * - `type`: Runtime element information.
+     * - `_private`: Internal shared state; do not modify.
      */
     typedef struct
     {
-        const ADT_VTable_t *vtable;
-        size_t size;
-        ADT_TypeInfo_t type;
+        struct
+        {
+            const ADT_VTable_t *vtable;
+            size_t size;
+            ADT_TypeInfo_t type;
+        } _private;
     } ADT_Super_t;
 
     /** @brief Opaque parameter type accepted by shared ADT functions. */
@@ -152,7 +153,7 @@ extern "C"
     static inline size_t adt_Size(const ADT_t *adt)
     {
         const ADT_Super_t *super = (const ADT_Super_t *)adt;
-        return super == NULL ? 0 : super->size;
+        return super == NULL ? 0 : super->_private.size;
     }
 
     /**
@@ -163,7 +164,7 @@ extern "C"
     static inline bool adt_IsEmpty(const ADT_t *adt)
     {
         const ADT_Super_t *super = (const ADT_Super_t *)adt;
-        return super == NULL || super->size == 0;
+        return super == NULL || super->_private.size == 0;
     }
 
     /**
@@ -174,7 +175,7 @@ extern "C"
     static inline const ADT_TypeInfo_t *adt_Type(const ADT_t *adt)
     {
         const ADT_Super_t *super = (const ADT_Super_t *)adt;
-        return super == NULL ? NULL : &super->type;
+        return super == NULL ? NULL : &super->_private.type;
     }
 
     /**

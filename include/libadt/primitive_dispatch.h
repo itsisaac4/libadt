@@ -30,18 +30,12 @@
 #define ADT_DETAIL_PRIMITIVE_ASSOCIATION(Prefix, Suffix, Type) \
     Type: ADT_DETAIL_JOIN(Prefix, Suffix),
 
-/**
- * @brief Selects a primitive function from a value's C type.
- * @param Prefix Shared function-name prefix.
- * @param Value Primitive value expression.
- * @return The selected function.
- */
-#define ADT_SELECT_PRIMITIVE_FUNCTION(Prefix, Value) \
-    _Generic((Value),                                \
-        ADT_DETAIL_FOR_EACH_PRIMITIVE(               \
-            ADT_DETAIL_PRIMITIVE_ASSOCIATION,         \
-            Prefix)                                  \
-        default: ((void *)0))
+#define ADT_DETAIL_DISPATCH_ELEMENT(Prefix, Value) \
+    _Generic((Value),                              \
+        ADT_DETAIL_FOR_EACH_PRIMITIVE(             \
+            ADT_DETAIL_PRIMITIVE_ASSOCIATION,       \
+            Prefix)                                \
+        default: ADT_DETAIL_JOIN(Prefix, Ref))
 
 /**
  * @brief Selects the built-in comparator for a C type.

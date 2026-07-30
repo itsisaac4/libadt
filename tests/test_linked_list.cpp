@@ -1,6 +1,7 @@
 extern "C"
 {
 #include "libadt/linked_list.h"
+#include "libadt/detail/linked_list_node.h"
 }
 
 #include "CppUTest/TestHarness.h"
@@ -43,47 +44,47 @@ static ADT_TypeInfo_t InvalidLinkedListTypeInfo()
 
 static void CheckIntList(const LinkedList_t *list, const int *expected, size_t expectedCount)
 {
-    UNSIGNED_LONGS_EQUAL(expectedCount, list->super.size);
+    UNSIGNED_LONGS_EQUAL(expectedCount, list->super._private.size);
 
     if (expectedCount == 0)
     {
-        POINTERS_EQUAL(NULL, list->head);
-        POINTERS_EQUAL(NULL, list->tail);
+        POINTERS_EQUAL(NULL, list->_private.head);
+        POINTERS_EQUAL(NULL, list->_private.tail);
         return;
     }
 
-    POINTERS_EQUAL(NULL, list->head->previous);
-    POINTERS_EQUAL(NULL, list->tail->next);
+    POINTERS_EQUAL(NULL, list->_private.head->_private.previous);
+    POINTERS_EQUAL(NULL, list->_private.tail->_private.next);
 
-    LinkedListNode_t *current = list->head;
+    LinkedListNode_t *current = list->_private.head;
     LinkedListNode_t *previous = NULL;
 
     for (size_t i = 0; i < expectedCount; ++i)
     {
         CHECK(current != NULL);
-        POINTERS_EQUAL(previous, current->previous);
-        LONGS_EQUAL(expected[i], *static_cast<int *>(current->data));
+        POINTERS_EQUAL(previous, current->_private.previous);
+        LONGS_EQUAL(expected[i], *static_cast<int *>(current->_private.data));
         previous = current;
-        current = current->next;
+        current = current->_private.next;
     }
 
     POINTERS_EQUAL(NULL, current);
-    POINTERS_EQUAL(list->tail, previous);
+    POINTERS_EQUAL(list->_private.tail, previous);
 
-    current = list->tail;
+    current = list->_private.tail;
     LinkedListNode_t *next = NULL;
 
     for (size_t i = expectedCount; i > 0; --i)
     {
         CHECK(current != NULL);
-        POINTERS_EQUAL(next, current->next);
-        LONGS_EQUAL(expected[i - 1], *static_cast<int *>(current->data));
+        POINTERS_EQUAL(next, current->_private.next);
+        LONGS_EQUAL(expected[i - 1], *static_cast<int *>(current->_private.data));
         next = current;
-        current = current->previous;
+        current = current->_private.previous;
     }
 
     POINTERS_EQUAL(NULL, current);
-    POINTERS_EQUAL(list->head, next);
+    POINTERS_EQUAL(list->_private.head, next);
 }
 
 /* =========================================================
@@ -110,9 +111,9 @@ TEST(LinkedListInitialization, InitCreatesEmptyList)
     CHECK_TRUE(ll_Init(&list, LinkedListIntTypeInfo()));
 
     CheckIntList(&list, NULL, 0);
-    UNSIGNED_LONGS_EQUAL(sizeof(int), list.super.type.elementSize);
-    FUNCTIONPOINTERS_EQUAL(CompareInt, list.super.type.compare);
-    FUNCTIONPOINTERS_EQUAL(PrintInt, list.super.type.print);
+    UNSIGNED_LONGS_EQUAL(sizeof(int), list.super._private.type.elementSize);
+    FUNCTIONPOINTERS_EQUAL(CompareInt, list.super._private.type.compare);
+    FUNCTIONPOINTERS_EQUAL(PrintInt, list.super._private.type.print);
 }
 
 TEST(LinkedListInitialization, InitMacroInfersBuiltInTypeCallbacks)
@@ -212,12 +213,12 @@ TEST(LinkedListInitialization, InitFromSupportsDoubleElements)
         3,
         LinkedListDoubleTypeInfo()));
 
-    LinkedListNode_t *current = list.head;
+    LinkedListNode_t *current = list._private.head;
     for (size_t i = 0; i < 3; ++i)
     {
         CHECK(current != NULL);
-        DOUBLES_EQUAL(values[i], *static_cast<double *>(current->data), 0.000001);
-        current = current->next;
+        DOUBLES_EQUAL(values[i], *static_cast<double *>(current->_private.data), 0.000001);
+        current = current->_private.next;
     }
 }
 
@@ -233,10 +234,10 @@ TEST(LinkedListInitialization, DestroyResetsList)
     ll_Destroy(&list);
 
     CheckIntList(&list, NULL, 0);
-    UNSIGNED_LONGS_EQUAL(0, list.super.type.elementSize);
-    POINTERS_EQUAL(NULL, list.super.type.compare);
-    POINTERS_EQUAL(NULL, list.super.type.print);
-    POINTERS_EQUAL(NULL, list.super.type.destroy);
+    UNSIGNED_LONGS_EQUAL(0, list.super._private.type.elementSize);
+    POINTERS_EQUAL(NULL, list.super._private.type.compare);
+    POINTERS_EQUAL(NULL, list.super._private.type.print);
+    POINTERS_EQUAL(NULL, list.super._private.type.destroy);
 }
 
 TEST(LinkedListInitialization, DestroyHandlesNullAndRepeatedCalls)
@@ -273,7 +274,7 @@ TEST_GROUP(LinkedListInsertion)
 TEST(LinkedListInsertion, AppendAddsElementToEmptyList)
 {
     int value = 10;
-    CHECK_TRUE(ll_AppendRef(&list, &value));
+    CHECK_TRUE(ll_detail_AppendRef(&list, &value));
 
     int expected[] = {10};
     CheckIntList(&list, expected, 1);
@@ -285,7 +286,7 @@ TEST(LinkedListInsertion, AppendPreservesInsertionOrder)
 
     for (size_t i = 0; i < 3; ++i)
     {
-        CHECK_TRUE(ll_AppendRef(&list, &values[i]));
+        CHECK_TRUE(ll_detail_AppendRef(&list, &values[i]));
     }
 
     CheckIntList(&list, values, 3);
@@ -297,9 +298,9 @@ TEST(LinkedListInsertion, PrependAddsAndShiftsElements)
     int thirty = 30;
     int ten = 10;
 
-    CHECK_TRUE(ll_AppendRef(&list, &twenty));
-    CHECK_TRUE(ll_AppendRef(&list, &thirty));
-    CHECK_TRUE(ll_PrependRef(&list, &ten));
+    CHECK_TRUE(ll_detail_AppendRef(&list, &twenty));
+    CHECK_TRUE(ll_detail_AppendRef(&list, &thirty));
+    CHECK_TRUE(ll_detail_PrependRef(&list, &ten));
 
     int expected[] = {10, 20, 30};
     CheckIntList(&list, expected, 3);
@@ -311,9 +312,9 @@ TEST(LinkedListInsertion, InsertAddsElementInMiddle)
     int thirty = 30;
     int twenty = 20;
 
-    CHECK_TRUE(ll_AppendRef(&list, &ten));
-    CHECK_TRUE(ll_AppendRef(&list, &thirty));
-    CHECK_TRUE(ll_InsertRef(&list, 1, &twenty));
+    CHECK_TRUE(ll_detail_AppendRef(&list, &ten));
+    CHECK_TRUE(ll_detail_AppendRef(&list, &thirty));
+    CHECK_TRUE(ll_detail_InsertRef(&list, 1, &twenty));
 
     int expected[] = {10, 20, 30};
     CheckIntList(&list, expected, 3);
@@ -324,8 +325,8 @@ TEST(LinkedListInsertion, InsertAtZeroBehavesLikePrepend)
     int twenty = 20;
     int ten = 10;
 
-    CHECK_TRUE(ll_AppendRef(&list, &twenty));
-    CHECK_TRUE(ll_InsertRef(&list, 0, &ten));
+    CHECK_TRUE(ll_detail_AppendRef(&list, &twenty));
+    CHECK_TRUE(ll_detail_InsertRef(&list, 0, &ten));
 
     int expected[] = {10, 20};
     CheckIntList(&list, expected, 2);
@@ -336,8 +337,8 @@ TEST(LinkedListInsertion, InsertAtSizeBehavesLikeAppend)
     int ten = 10;
     int twenty = 20;
 
-    CHECK_TRUE(ll_AppendRef(&list, &ten));
-    CHECK_TRUE(ll_InsertRef(&list, list.super.size, &twenty));
+    CHECK_TRUE(ll_detail_AppendRef(&list, &ten));
+    CHECK_TRUE(ll_detail_InsertRef(&list, list.super._private.size, &twenty));
 
     int expected[] = {10, 20};
     CheckIntList(&list, expected, 2);
@@ -348,14 +349,14 @@ TEST(LinkedListInsertion, InsertRejectsInvalidArguments)
     int value = 10;
     LinkedList_t invalidList = {};
 
-    CHECK_FALSE(ll_AppendRef(NULL, &value));
-    CHECK_FALSE(ll_AppendRef(&list, NULL));
-    CHECK_FALSE(ll_AppendRef(&invalidList, &value));
-    CHECK_FALSE(ll_PrependRef(NULL, &value));
-    CHECK_FALSE(ll_PrependRef(&list, NULL));
-    CHECK_FALSE(ll_InsertRef(NULL, 0, &value));
-    CHECK_FALSE(ll_InsertRef(&list, 0, NULL));
-    CHECK_FALSE(ll_InsertRef(&list, 1, &value));
+    CHECK_FALSE(ll_detail_AppendRef(NULL, &value));
+    CHECK_FALSE(ll_detail_AppendRef(&list, NULL));
+    CHECK_FALSE(ll_detail_AppendRef(&invalidList, &value));
+    CHECK_FALSE(ll_detail_PrependRef(NULL, &value));
+    CHECK_FALSE(ll_detail_PrependRef(&list, NULL));
+    CHECK_FALSE(ll_detail_InsertRef(NULL, 0, &value));
+    CHECK_FALSE(ll_detail_InsertRef(&list, 0, NULL));
+    CHECK_FALSE(ll_detail_InsertRef(&list, 1, &value));
 
     CheckIntList(&list, NULL, 0);
 }
@@ -363,14 +364,14 @@ TEST(LinkedListInsertion, InsertRejectsInvalidArguments)
 TEST(LinkedListInsertion, InsertRejectsSizeOverflow)
 {
     int value = 10;
-    list.super.size = static_cast<size_t>(-1);
+    list.super._private.size = static_cast<size_t>(-1);
 
-    CHECK_FALSE(ll_AppendRef(&list, &value));
-    CHECK_FALSE(ll_PrependRef(&list, &value));
+    CHECK_FALSE(ll_detail_AppendRef(&list, &value));
+    CHECK_FALSE(ll_detail_PrependRef(&list, &value));
 
-    POINTERS_EQUAL(NULL, list.head);
-    POINTERS_EQUAL(NULL, list.tail);
-    list.super.size = 0;
+    POINTERS_EQUAL(NULL, list._private.head);
+    POINTERS_EQUAL(NULL, list._private.tail);
+    list.super._private.size = 0;
 }
 
 TEST(LinkedListInsertion, OperationsMakeIndependentCopies)
@@ -379,9 +380,9 @@ TEST(LinkedListInsertion, OperationsMakeIndependentCopies)
     int prepended = 5;
     int inserted = 7;
 
-    CHECK_TRUE(ll_AppendRef(&list, &appended));
-    CHECK_TRUE(ll_PrependRef(&list, &prepended));
-    CHECK_TRUE(ll_InsertRef(&list, 1, &inserted));
+    CHECK_TRUE(ll_detail_AppendRef(&list, &appended));
+    CHECK_TRUE(ll_detail_PrependRef(&list, &prepended));
+    CHECK_TRUE(ll_detail_InsertRef(&list, 1, &inserted));
 
     appended = 100;
     prepended = 50;
@@ -400,13 +401,13 @@ TEST(LinkedListInsertion, InsertSupportsDoubleValues)
     double third = 3.5;
     double second = 2.5;
 
-    CHECK_TRUE(ll_AppendRef(&list, &first));
-    CHECK_TRUE(ll_AppendRef(&list, &third));
-    CHECK_TRUE(ll_InsertRef(&list, 1, &second));
+    CHECK_TRUE(ll_detail_AppendRef(&list, &first));
+    CHECK_TRUE(ll_detail_AppendRef(&list, &third));
+    CHECK_TRUE(ll_detail_InsertRef(&list, 1, &second));
 
-    DOUBLES_EQUAL(1.5, *static_cast<double *>(list.head->data), 0.000001);
-    DOUBLES_EQUAL(2.5, *static_cast<double *>(list.head->next->data), 0.000001);
-    DOUBLES_EQUAL(3.5, *static_cast<double *>(list.tail->data), 0.000001);
+    DOUBLES_EQUAL(1.5, *static_cast<double *>(list._private.head->_private.data), 0.000001);
+    DOUBLES_EQUAL(2.5, *static_cast<double *>(list._private.head->_private.next->_private.data), 0.000001);
+    DOUBLES_EQUAL(3.5, *static_cast<double *>(list._private.tail->_private.data), 0.000001);
 }
 
 /* =========================================================
@@ -462,7 +463,7 @@ TEST(LinkedListRemoval, RemoveOnlyElementResetsHeadAndTail)
 {
     ll_Clear(&list);
     int value = 10;
-    CHECK_TRUE(ll_AppendRef(&list, &value));
+    CHECK_TRUE(ll_detail_AppendRef(&list, &value));
     CHECK_TRUE(ll_Remove(&list, 0));
 
     CheckIntList(&list, NULL, 0);
@@ -471,7 +472,7 @@ TEST(LinkedListRemoval, RemoveOnlyElementResetsHeadAndTail)
 TEST(LinkedListRemoval, RemoveRejectsInvalidArguments)
 {
     CHECK_FALSE(ll_Remove(NULL, 0));
-    CHECK_FALSE(ll_Remove(&list, list.super.size));
+    CHECK_FALSE(ll_Remove(&list, list.super._private.size));
     CHECK_FALSE(ll_Remove(&list, 100));
 
     int expected[] = {10, 20, 30, 40};
@@ -494,8 +495,8 @@ TEST(LinkedListRemoval, TakeRejectsInvalidArguments)
 
     CHECK_FALSE(ll_Take(NULL, 0, &output));
     CHECK_FALSE(ll_Take(&list, 0, NULL));
-    CHECK_FALSE(ll_Take(&list, list.super.size, &output));
-    CHECK_FALSE(ll_Take(&list, 0, list.head->data));
+    CHECK_FALSE(ll_Take(&list, list.super._private.size, &output));
+    CHECK_FALSE(ll_Take(&list, 0, list._private.head->_private.data));
 
     int expected[] = {10, 20, 30, 40};
     CheckIntList(&list, expected, 4);
@@ -505,10 +506,10 @@ TEST(LinkedListRemoval, ClearRemovesAllElementsAndAllowsReuse)
 {
     ll_Clear(&list);
     CheckIntList(&list, NULL, 0);
-    UNSIGNED_LONGS_EQUAL(sizeof(int), list.super.type.elementSize);
+    UNSIGNED_LONGS_EQUAL(sizeof(int), list.super._private.type.elementSize);
 
     int value = 99;
-    CHECK_TRUE(ll_AppendRef(&list, &value));
+    CHECK_TRUE(ll_detail_AppendRef(&list, &value));
 
     int expected[] = {99};
     CheckIntList(&list, expected, 1);
@@ -583,13 +584,13 @@ TEST(LinkedListAccess, GetRejectsInvalidArguments)
 
     CHECK_FALSE(ll_Get(NULL, 0, &output));
     CHECK_FALSE(ll_Get(&list, 0, NULL));
-    CHECK_FALSE(ll_Get(&list, list.super.size, &output));
+    CHECK_FALSE(ll_Get(&list, list.super._private.size, &output));
 }
 
 TEST(LinkedListAccess, SetReplacesElement)
 {
     int replacement = 99;
-    CHECK_TRUE(ll_SetRef(&list, 2, &replacement));
+    CHECK_TRUE(ll_detail_SetRef(&list, 2, &replacement));
 
     int expected[] = {10, 20, 99, 30};
     CheckIntList(&list, expected, 4);
@@ -599,9 +600,9 @@ TEST(LinkedListAccess, SetRejectsInvalidArguments)
 {
     int replacement = 99;
 
-    CHECK_FALSE(ll_SetRef(NULL, 0, &replacement));
-    CHECK_FALSE(ll_SetRef(&list, 0, NULL));
-    CHECK_FALSE(ll_SetRef(&list, list.super.size, &replacement));
+    CHECK_FALSE(ll_detail_SetRef(NULL, 0, &replacement));
+    CHECK_FALSE(ll_detail_SetRef(&list, 0, NULL));
+    CHECK_FALSE(ll_detail_SetRef(&list, list.super._private.size, &replacement));
 
     int expected[] = {10, 20, 20, 30};
     CheckIntList(&list, expected, 4);
@@ -612,7 +613,7 @@ TEST(LinkedListAccess, IndexOfFindsFirstMatchingElement)
     int target = 20;
     size_t index = 99;
 
-    CHECK_TRUE(ll_IndexOfRef(&list, &target, &index));
+    CHECK_TRUE(ll_detail_IndexOfRef(&list, &target, &index));
     UNSIGNED_LONGS_EQUAL(1, index);
 }
 
@@ -621,7 +622,7 @@ TEST(LinkedListAccess, IndexOfReturnsFalseWithoutChangingOutput)
     int target = 99;
     size_t index = 42;
 
-    CHECK_FALSE(ll_IndexOfRef(&list, &target, &index));
+    CHECK_FALSE(ll_detail_IndexOfRef(&list, &target, &index));
     UNSIGNED_LONGS_EQUAL(42, index);
 }
 
@@ -630,9 +631,9 @@ TEST(LinkedListAccess, IndexOfRejectsInvalidArguments)
     int target = 20;
     size_t index = 0;
 
-    CHECK_FALSE(ll_IndexOfRef(NULL, &target, &index));
-    CHECK_FALSE(ll_IndexOfRef(&list, NULL, &index));
-    CHECK_FALSE(ll_IndexOfRef(&list, &target, NULL));
+    CHECK_FALSE(ll_detail_IndexOfRef(NULL, &target, &index));
+    CHECK_FALSE(ll_detail_IndexOfRef(&list, NULL, &index));
+    CHECK_FALSE(ll_detail_IndexOfRef(&list, &target, NULL));
 }
 
 TEST(LinkedListAccess, ContainsUsesConfiguredComparator)
@@ -640,10 +641,10 @@ TEST(LinkedListAccess, ContainsUsesConfiguredComparator)
     int present = 30;
     int absent = 99;
 
-    CHECK_TRUE(ll_ContainsRef(&list, &present));
-    CHECK_FALSE(ll_ContainsRef(&list, &absent));
-    CHECK_FALSE(ll_ContainsRef(NULL, &present));
-    CHECK_FALSE(ll_ContainsRef(&list, NULL));
+    CHECK_TRUE(ll_detail_ContainsRef(&list, &present));
+    CHECK_FALSE(ll_detail_ContainsRef(&list, &absent));
+    CHECK_FALSE(ll_detail_ContainsRef(NULL, &present));
+    CHECK_FALSE(ll_detail_ContainsRef(&list, NULL));
 }
 
 TEST(LinkedListAccess, IndexOfFallsBackToByteComparison)
@@ -662,7 +663,7 @@ TEST(LinkedListAccess, IndexOfFallsBackToByteComparison)
     int target = 8;
     size_t index = 0;
 
-    CHECK_TRUE(ll_IndexOfRef(&list, &target, &index));
+    CHECK_TRUE(ll_detail_IndexOfRef(&list, &target, &index));
     UNSIGNED_LONGS_EQUAL(1, index);
 }
 
@@ -698,7 +699,7 @@ static bool AppendOwnedInt(LinkedList_t *list, int value)
     }
 
     *owned = value;
-    if (!ll_AppendRef(list, &owned))
+    if (!ll_detail_AppendRef(list, &owned))
     {
         free(owned);
         return false;
@@ -757,7 +758,7 @@ TEST(LinkedListTypeInfo, SetDestroysReplacedElement)
     CHECK(replacement != NULL);
     *replacement = 20;
 
-    const bool replaced = ll_SetRef(&list, 0, &replacement);
+    const bool replaced = ll_detail_SetRef(&list, 0, &replacement);
     if (!replaced)
     {
         free(replacement);
@@ -775,7 +776,7 @@ TEST(LinkedListTypeInfo, SetFromSameElementDoesNotDestroyIt)
     initializeOwnedList();
     CHECK_TRUE(AppendOwnedInt(&list, 10));
 
-    CHECK_TRUE(ll_SetRef(&list, 0, list.head->data));
+    CHECK_TRUE(ll_detail_SetRef(&list, 0, list._private.head->_private.data));
     LONGS_EQUAL(0, linkedListDestroyCallCount);
 
     ll_Destroy(&list);

@@ -16,8 +16,8 @@ int main(void)
     LinkedList_t numbers = {0};
 
     if (!LL_INIT_FROM(&numbers, values) ||
-        !ll_PrependValue(&numbers, 10) ||
-        !ll_AppendValue(&numbers, 50))
+        !ll_Prepend(&numbers, 10) ||
+        !ll_Append(&numbers, 50))
     {
         ll_Destroy(&numbers);
         return EXIT_FAILURE;
@@ -37,15 +37,14 @@ Use `LL_INIT(&list, type)` for an empty primitive list and
 | Category | Functions |
 | --- | --- |
 | Initialization | `ll_Init`, `ll_InitFrom`, `LL_INIT`, `LL_INIT_FROM` |
-| Access | `ll_Get`, `ll_SetRef`, `ll_SetValue` |
-| Search | `ll_IndexOfRef`, `ll_IndexOfValue`, `ll_ContainsRef`, `ll_ContainsValue` |
-| Insertion | `ll_InsertRef`, `ll_InsertValue`, `ll_PrependRef`, `ll_PrependValue`, `ll_AppendRef`, `ll_AppendValue` |
+| Access | `ll_Get`, `ll_Set` |
+| Search | `ll_IndexOf`, `ll_Contains` |
+| Insertion | `ll_Insert`, `ll_Prepend`, `ll_Append` |
 | Removal | `ll_Remove`, `ll_Take`, `ll_Clear`, `ll_Destroy` |
 | Shared | `adt_Size`, `adt_IsEmpty`, `adt_Print`, `adt_Min`, `adt_Max`, `adt_Sort` |
 
-Functions ending in `Value` accept supported primitive values. Functions
-ending in `Ref` accept the address of custom, pointer, or primitive element
-storage.
+Each operation supports any type matching the list's initialized element type.
+Pass supported primitives directly and all other types by address.
 
 ## Access and removal
 
@@ -88,7 +87,7 @@ if (ll_Init(&students, studentType))
 {
     Student_t student = MakeStudent(1001, "Ada");
 
-    if (!ll_AppendRef(&students, &student))
+    if (!ll_Append(&students, &student))
     {
         DestroyStudent(&student);
     }

@@ -8,6 +8,13 @@ typedef struct
     int value;
 } MacroStruct;
 
+typedef int (*MacroFunctionFn_t)(int value);
+
+static int Increment(int value)
+{
+    return value + 1;
+}
+
 bool C23UnknownTypeUsesSafeDefaults(void)
 {
     DynamicArray_t array = {0};
@@ -18,14 +25,14 @@ bool C23UnknownTypeUsesSafeDefaults(void)
     }
 
     const bool usesSafeDefaults =
-        array.super.type.compare == NULL &&
-        array.super.type.print == NULL;
+        array.super._private.type.compare == NULL &&
+        array.super._private.type.print == NULL;
 
     MacroStruct value = {.value = 42};
     MacroStruct target = {.value = 42};
     const bool supportsByteComparison =
-        da_AppendRef(&array, &value) &&
-        da_ContainsRef(&array, &target);
+        da_Append(&array, &value) &&
+        da_Contains(&array, &target);
 
     da_Destroy(&array);
     return usesSafeDefaults && supportsByteComparison;
@@ -42,10 +49,10 @@ bool C23InitFromInfersIntType(void)
     }
 
     const bool inferredInt =
-        array.super.type.elementSize == sizeof(int) &&
-        array.super.type.compare == CompareInt &&
-        array.super.type.print == PrintInt &&
-        array.super.size == ARRAY_COUNT(values);
+        array.super._private.type.elementSize == sizeof(int) &&
+        array.super._private.type.compare == CompareInt &&
+        array.super._private.type.print == PrintInt &&
+        array.super._private.size == ARRAY_COUNT(values);
 
     da_Destroy(&array);
     return inferredInt;
@@ -61,10 +68,10 @@ bool C23LinkedListInitInfersIntType(void)
     }
 
     const bool inferredInt =
-        list.super.type.elementSize == sizeof(int) &&
-        list.super.type.compare == CompareInt &&
-        list.super.type.print == PrintInt &&
-        list.super.size == 0;
+        list.super._private.type.elementSize == sizeof(int) &&
+        list.super._private.type.compare == CompareInt &&
+        list.super._private.type.print == PrintInt &&
+        list.super._private.size == 0;
 
     ll_Destroy(&list);
     return inferredInt;
@@ -81,10 +88,10 @@ bool C23LinkedListInitFromInfersIntType(void)
     }
 
     const bool inferredInt =
-        list.super.type.elementSize == sizeof(int) &&
-        list.super.type.compare == CompareInt &&
-        list.super.type.print == PrintInt &&
-        list.super.size == ARRAY_COUNT(values);
+        list.super._private.type.elementSize == sizeof(int) &&
+        list.super._private.type.compare == CompareInt &&
+        list.super._private.type.print == PrintInt &&
+        list.super._private.size == ARRAY_COUNT(values);
 
     ll_Destroy(&list);
     return inferredInt;
@@ -107,8 +114,8 @@ bool C23LinkedListInitFromInfersIntType(void)
         }                                                              \
                                                                        \
         const bool works =                                             \
-            da_AppendValue(&array, value) &&                           \
-            da_ContainsValue(&array, value);                           \
+            da_Append(&array, value) &&                                \
+            da_Contains(&array, value);                                \
         da_Destroy(&array);                                            \
         return works;                                                  \
     }                                                                  \
@@ -129,8 +136,8 @@ bool C23LinkedListInitFromInfersIntType(void)
         }                                                              \
                                                                        \
         const bool works =                                             \
-            ll_AppendValue(&list, value) &&                            \
-            ll_ContainsValue(&list, value);                            \
+            ll_Append(&list, value) &&                                 \
+            ll_Contains(&list, value);                                 \
         ll_Destroy(&list);                                             \
         return works;                                                  \
     }
@@ -180,24 +187,103 @@ bool C23PrimitiveOperationsDispatchByValue(void)
     }
 
     const bool arrayWorks =
-        da_AppendValue(&array, 2) &&
-        da_PrependValue(&array, 1) &&
-        da_InsertValue(&array, 1, 3) &&
-        da_SetValue(&array, 2, 4) &&
-        da_ContainsValue(&array, 3) &&
-        da_IndexOfValue(&array, 4, &arrayIndex) &&
+        da_Append(&array, 2) &&
+        da_Prepend(&array, 1) &&
+        da_Insert(&array, 1, 3) &&
+        da_Set(&array, 2, 4) &&
+        da_Contains(&array, 3) &&
+        da_IndexOf(&array, 4, &arrayIndex) &&
         arrayIndex == 2;
 
     const bool listWorks =
-        ll_AppendValue(&list, 2) &&
-        ll_PrependValue(&list, 1) &&
-        ll_InsertValue(&list, 1, 3) &&
-        ll_SetValue(&list, 2, 4) &&
-        ll_ContainsValue(&list, 3) &&
-        ll_IndexOfValue(&list, 4, &listIndex) &&
+        ll_Append(&list, 2) &&
+        ll_Prepend(&list, 1) &&
+        ll_Insert(&list, 1, 3) &&
+        ll_Set(&list, 2, 4) &&
+        ll_Contains(&list, 3) &&
+        ll_IndexOf(&list, 4, &listIndex) &&
         listIndex == 2;
 
     da_Destroy(&array);
     ll_Destroy(&list);
     return arrayWorks && listWorks;
+}
+
+bool C23CustomOperationsDispatchByAddress(void)
+{
+    const ADT_TypeInfo_t type = {
+        .elementSize = sizeof(MacroStruct),
+        .compare = NULL,
+        .print = NULL,
+        .destroy = NULL};
+    DynamicArray_t array = {0};
+    LinkedList_t list = {0};
+    MacroStruct one = {.value = 1};
+    MacroStruct two = {.value = 2};
+    MacroStruct three = {.value = 3};
+    MacroStruct four = {.value = 4};
+    size_t arrayIndex = 0;
+    size_t listIndex = 0;
+
+    if (!da_Init(&array, type) || !ll_Init(&list, type))
+    {
+        da_Destroy(&array);
+        ll_Destroy(&list);
+        return false;
+    }
+
+    const bool arrayWorks =
+        da_Append(&array, &two) &&
+        da_Prepend(&array, &one) &&
+        da_Insert(&array, 1, &three) &&
+        da_Set(&array, 2, &four) &&
+        da_Contains(&array, &three) &&
+        da_IndexOf(&array, &four, &arrayIndex) &&
+        arrayIndex == 2;
+
+    const bool listWorks =
+        ll_Append(&list, &two) &&
+        ll_Prepend(&list, &one) &&
+        ll_Insert(&list, 1, &three) &&
+        ll_Set(&list, 2, &four) &&
+        ll_Contains(&list, &three) &&
+        ll_IndexOf(&list, &four, &listIndex) &&
+        listIndex == 2;
+
+    da_Destroy(&array);
+    ll_Destroy(&list);
+    return arrayWorks && listWorks;
+}
+
+bool C23FunctionPointersDispatchByAddress(void)
+{
+    const ADT_TypeInfo_t type = {
+        .elementSize = sizeof(MacroFunctionFn_t),
+        .compare = NULL,
+        .print = NULL,
+        .destroy = NULL};
+    DynamicArray_t array = {0};
+    LinkedList_t list = {0};
+    MacroFunctionFn_t function = Increment;
+    MacroFunctionFn_t arrayFunction = NULL;
+    MacroFunctionFn_t listFunction = NULL;
+
+    if (!da_Init(&array, type) || !ll_Init(&list, type))
+    {
+        da_Destroy(&array);
+        ll_Destroy(&list);
+        return false;
+    }
+
+    const bool works =
+        da_Append(&array, &function) &&
+        ll_Append(&list, &function) &&
+        da_Get(&array, 0, &arrayFunction) &&
+        ll_Get(&list, 0, &listFunction) &&
+        arrayFunction(41) == 42 &&
+        listFunction(41) == 42;
+
+    da_Destroy(&array);
+    ll_Destroy(&list);
+    return works;
 }

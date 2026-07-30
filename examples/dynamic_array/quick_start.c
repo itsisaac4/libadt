@@ -9,8 +9,8 @@ int main(void)
     DynamicArray_t numbers = {0};
 
     if (!DA_INIT_FROM(&numbers, values) ||
-        !da_PrependValue(&numbers, 5) ||
-        !da_AppendValue(&numbers, 40))
+        !da_Prepend(&numbers, 5) ||
+        !da_Append(&numbers, 40))
     {
         da_Destroy(&numbers);
         return EXIT_FAILURE;
@@ -21,7 +21,7 @@ int main(void)
     int target = 20;
     size_t index = 0;
 
-    if (da_IndexOfValue(&numbers, target, &index))
+    if (da_IndexOf(&numbers, target, &index))
     {
         printf("%d is at index %zu.\n", target, index);
     }

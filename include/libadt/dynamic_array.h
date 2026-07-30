@@ -17,14 +17,17 @@ extern "C"
      *
      * Members:
      * - `super`: Shared ADT state; must remain first.
-     * - `data`: Container-owned element storage.
-     * - `capacity`: Number of allocated element slots.
+     * - `_private`: Internal array state; do not modify.
      */
     typedef struct
     {
         ADT_Super_t super;
-        void *data;
-        size_t capacity;
+        
+        struct
+        {
+            void *data;
+            size_t capacity;
+        } _private;
     } DynamicArray_t;
 
 #ifdef __cplusplus
@@ -94,168 +97,103 @@ _Static_assert(offsetof(DynamicArray_t, super) == 0, "DynamicArray_t.super must 
      */
     bool da_Get(const DynamicArray_t *array, size_t index, void *outElement);
 
-    /**
-     * @brief Replaces an element with a shallow copy.
-     *
-     * Use da_SetValue for supported primitives. Use da_SetRef with the
-     * address of element storage for custom or pointer element types.
-     *
-     * @param[in,out] array Target array.
-     * @param index Element index.
-     * @param element Address of the replacement element.
-     * @return true on success; otherwise false.
-     */
-    bool da_SetRef(DynamicArray_t *array, size_t index, const void *element);
-
-    /**
-     * @brief Finds the first equal element.
-     *
-     * Use da_IndexOfValue for supported primitives. Use da_IndexOfRef with
-     * the address of element storage for custom or pointer element types.
-     *
-     * @param array Array to search.
-     * @param element Address of the element to find.
-     * @param[out] outIndex Matching index.
-     * @return true when found; otherwise false.
-     */
-    bool da_IndexOfRef(const DynamicArray_t *array, const void *element, size_t *outIndex);
-
-    /**
-     * @brief Checks whether an equal element exists.
-     *
-     * Use da_ContainsValue for supported primitives. Use da_ContainsRef with
-     * the address of element storage for custom or pointer element types.
-     *
-     * @param array Array to search.
-     * @param element Address of the element to find.
-     * @return true when found; otherwise false.
-     */
-    bool da_ContainsRef(const DynamicArray_t *array, const void *element);
-
-    /**
-     * @brief Inserts a shallow element copy at an index.
-     *
-     * Use da_InsertValue for supported primitives. Use da_InsertRef with the
-     * address of element storage for custom or pointer element types.
-     *
-     * @param[in,out] array Target array.
-     * @param index Insertion index from zero through size.
-     * @param element Address of the element to insert.
-     * @return true on success; otherwise false.
-     */
-    bool da_InsertRef(DynamicArray_t *array, size_t index, const void *element);
-
-    /**
-     * @brief Prepends a shallow element copy.
-     *
-     * Use da_PrependValue for supported primitives. Use da_PrependRef with
-     * the address of element storage for custom or pointer element types.
-     *
-     * @param[in,out] array Target array.
-     * @param element Address of the element to prepend.
-     * @return true on success; otherwise false.
-     */
-    bool da_PrependRef(DynamicArray_t *array, const void *element);
-
-    /**
-     * @brief Appends a shallow element copy.
-     *
-     * Use da_AppendValue for supported primitives. Use da_AppendRef with the
-     * address of element storage for custom or pointer element types.
-     *
-     * @param[in,out] array Target array.
-     * @param element Address of the element to append.
-     * @return true on success; otherwise false.
-     */
-    bool da_AppendRef(DynamicArray_t *array, const void *element);
-
-    /**
-     * @brief Declares pass-by-value variants for one primitive type.
-     * @param Suffix Function-name suffix.
-     * @param Type Primitive parameter type.
-     * @return The generated declarations.
-     */
-#define ADT_PRIMITIVE(Suffix, Type)                                                       \
-    bool da_IndexOf##Suffix(const DynamicArray_t *array, Type element, size_t *outIndex); \
-    bool da_Contains##Suffix(const DynamicArray_t *array, Type element);                  \
-    bool da_Set##Suffix(DynamicArray_t *array, size_t index, Type element);               \
-    bool da_Insert##Suffix(DynamicArray_t *array, size_t index, Type element);            \
-    bool da_Prepend##Suffix(DynamicArray_t *array, Type element);                         \
-    bool da_Append##Suffix(DynamicArray_t *array, Type element);
-    ADT_FOR_EACH_PRIMITIVE(ADT_PRIMITIVE)
-#undef ADT_PRIMITIVE
+#include "detail/dynamic_array_operations.h"
 
 #ifndef __cplusplus
 /**
- * @brief Finds a primitive value using type-based dispatch.
+ * @brief Finds the first equal element using type-based dispatch.
+ *
+ * Supports any initialized element type. Pass supported primitives by value
+ * and all other element types by address.
+ *
  * @param array Array to search.
- * @param element Primitive value.
+ * @param element Value or address matching the initialized element type.
  * @param[out] outIndex Matching index.
  * @return true when found; otherwise false.
  */
-#define da_IndexOfValue(array, element, outIndex)         \
-    ADT_SELECT_PRIMITIVE_FUNCTION(da_IndexOf, (element))( \
-        (array),                                          \
-        (element),                                        \
+#define da_IndexOf(array, element, outIndex)               \
+    ADT_DETAIL_DISPATCH_ELEMENT(da_detail_IndexOf, (element))( \
+        (array),                                           \
+        (element),                                         \
         (outIndex))
 
 /**
- * @brief Checks for a primitive value using type-based dispatch.
+ * @brief Checks for an equal element using type-based dispatch.
+ *
+ * Supports any initialized element type. Pass supported primitives by value
+ * and all other element types by address.
+ *
  * @param array Array to search.
- * @param element Primitive value.
+ * @param element Value or address matching the initialized element type.
  * @return true when found; otherwise false.
  */
-#define da_ContainsValue(array, element)                   \
-    ADT_SELECT_PRIMITIVE_FUNCTION(da_Contains, (element))( \
-        (array),                                           \
+#define da_Contains(array, element)                         \
+    ADT_DETAIL_DISPATCH_ELEMENT(da_detail_Contains, (element))( \
+        (array),                                            \
         (element))
 
 /**
- * @brief Replaces an element with a primitive value.
+ * @brief Replaces an element with a shallow copy.
+ *
+ * Supports any initialized element type. Pass supported primitives by value
+ * and all other element types by address.
+ *
  * @param array Target array.
  * @param index Element index.
- * @param element Primitive replacement value.
+ * @param element Value or address matching the initialized element type.
  * @return true on success; otherwise false.
  */
-#define da_SetValue(array, index, element)            \
-    ADT_SELECT_PRIMITIVE_FUNCTION(da_Set, (element))( \
-        (array),                                      \
-        (index),                                      \
-        (element))
-
-/**
- * @brief Inserts a primitive value at an index.
- * @param array Target array.
- * @param index Insertion index.
- * @param element Primitive value.
- * @return true on success; otherwise false.
- */
-#define da_InsertValue(array, index, element)            \
-    ADT_SELECT_PRIMITIVE_FUNCTION(da_Insert, (element))( \
-        (array),                                         \
-        (index),                                         \
-        (element))
-
-/**
- * @brief Prepends a primitive value.
- * @param array Target array.
- * @param element Primitive value.
- * @return true on success; otherwise false.
- */
-#define da_PrependValue(array, element)                   \
-    ADT_SELECT_PRIMITIVE_FUNCTION(da_Prepend, (element))( \
+#define da_Set(array, index, element)                     \
+    ADT_DETAIL_DISPATCH_ELEMENT(da_detail_Set, (element))( \
         (array),                                          \
+        (index),                                          \
         (element))
 
 /**
- * @brief Appends a primitive value.
+ * @brief Inserts a shallow element copy at an index.
+ *
+ * Supports any initialized element type. Pass supported primitives by value
+ * and all other element types by address.
+ *
  * @param array Target array.
- * @param element Primitive value.
+ * @param index Insertion index from zero through size.
+ * @param element Value or address matching the initialized element type.
  * @return true on success; otherwise false.
  */
-#define da_AppendValue(array, element)                   \
-    ADT_SELECT_PRIMITIVE_FUNCTION(da_Append, (element))( \
-        (array),                                         \
+#define da_Insert(array, index, element)                     \
+    ADT_DETAIL_DISPATCH_ELEMENT(da_detail_Insert, (element))( \
+        (array),                                             \
+        (index),                                             \
+        (element))
+
+/**
+ * @brief Prepends a shallow element copy.
+ *
+ * Supports any initialized element type. Pass supported primitives by value
+ * and all other element types by address.
+ *
+ * @param array Target array.
+ * @param element Value or address matching the initialized element type.
+ * @return true on success; otherwise false.
+ */
+#define da_Prepend(array, element)                         \
+    ADT_DETAIL_DISPATCH_ELEMENT(da_detail_Prepend, (element))( \
+        (array),                                            \
+        (element))
+
+/**
+ * @brief Appends a shallow element copy.
+ *
+ * Supports any initialized element type. Pass supported primitives by value
+ * and all other element types by address.
+ *
+ * @param array Target array.
+ * @param element Value or address matching the initialized element type.
+ * @return true on success; otherwise false.
+ */
+#define da_Append(array, element)                         \
+    ADT_DETAIL_DISPATCH_ELEMENT(da_detail_Append, (element))( \
+        (array),                                           \
         (element))
 #endif
 

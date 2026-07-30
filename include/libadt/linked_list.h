@@ -12,34 +12,25 @@ extern "C"
 {
 #endif
 
-    /**
-     * @brief Stores one element and its neighboring links.
-     *
-     * Members:
-     * - `data`: Container-owned element storage.
-     * - `previous`: Previous node, or NULL.
-     * - `next`: Next node, or NULL.
-     */
-    typedef struct LinkedListNode
-    {
-        void *data;
-        struct LinkedListNode *previous;
-        struct LinkedListNode *next;
-    } LinkedListNode_t;
+    /** @brief Opaque node type managed by a linked list. */
+    typedef struct LinkedListNode LinkedListNode_t;
 
     /**
      * @brief Stores elements in a doubly linked sequence.
      *
      * Members:
      * - `super`: Shared ADT state; must remain first.
-     * - `head`: First node, or NULL.
-     * - `tail`: Last node, or NULL.
+     * - `_private`: Internal list state; do not modify.
      */
     typedef struct
     {
         ADT_Super_t super;
-        LinkedListNode_t *head;
-        LinkedListNode_t *tail;
+
+        struct
+        {
+            LinkedListNode_t *head;
+            LinkedListNode_t *tail;
+        } _private;
     } LinkedList_t;
 
 #ifdef __cplusplus
@@ -55,13 +46,13 @@ _Static_assert(offsetof(LinkedList_t, super) == 0, "LinkedList_t.super must be f
  * @param type Element type.
  * @return true on success; otherwise false.
  */
-#define LL_INIT(list, type)             \
-    ll_Init(                            \
-        (list),                         \
-        (ADT_TypeInfo_t){               \
+#define LL_INIT(list, type)              \
+    ll_Init(                             \
+        (list),                          \
+        (ADT_TypeInfo_t){                \
             .elementSize = sizeof(type), \
             .compare = COMPARATOR(type), \
-            .print = PRINTER(type),     \
+            .print = PRINTER(type),      \
             .destroy = NULL})
 
 /**
@@ -70,15 +61,15 @@ _Static_assert(offsetof(LinkedList_t, super) == 0, "LinkedList_t.super must be f
  * @param values Values to copy.
  * @return true on success; otherwise false.
  */
-#define LL_INIT_FROM(list, values)                            \
-    ll_InitFrom(                                              \
-        (list),                                               \
-        (values),                                             \
-        ARRAY_COUNT(values),                                  \
-        (ADT_TypeInfo_t){                                     \
-            .elementSize = sizeof((values)[0]),               \
+#define LL_INIT_FROM(list, values)                             \
+    ll_InitFrom(                                               \
+        (list),                                                \
+        (values),                                              \
+        ARRAY_COUNT(values),                                   \
+        (ADT_TypeInfo_t){                                      \
+            .elementSize = sizeof((values)[0]),                \
             .compare = COMPARATOR(typeof_unqual((values)[0])), \
-            .print = PRINTER(typeof_unqual((values)[0])),     \
+            .print = PRINTER(typeof_unqual((values)[0])),      \
             .destroy = NULL})
 #endif
 
@@ -109,168 +100,103 @@ _Static_assert(offsetof(LinkedList_t, super) == 0, "LinkedList_t.super must be f
      */
     bool ll_Get(const LinkedList_t *list, size_t index, void *outElement);
 
-    /**
-     * @brief Replaces an element with a shallow copy.
-     *
-     * Use ll_SetValue for supported primitives. Use ll_SetRef with the address
-     * of element storage for custom or pointer element types.
-     *
-     * @param[in,out] list Target list.
-     * @param index Element index.
-     * @param element Address of the replacement element.
-     * @return true on success; otherwise false.
-     */
-    bool ll_SetRef(LinkedList_t *list, size_t index, const void *element);
-
-    /**
-     * @brief Finds the first equal element.
-     *
-     * Use ll_IndexOfValue for supported primitives. Use ll_IndexOfRef with the
-     * address of element storage for custom or pointer element types.
-     *
-     * @param list List to search.
-     * @param element Address of the element to find.
-     * @param[out] outIndex Matching index.
-     * @return true when found; otherwise false.
-     */
-    bool ll_IndexOfRef(const LinkedList_t *list, const void *element, size_t *outIndex);
-
-    /**
-     * @brief Checks whether an equal element exists.
-     *
-     * Use ll_ContainsValue for supported primitives. Use ll_ContainsRef with
-     * the address of element storage for custom or pointer element types.
-     *
-     * @param list List to search.
-     * @param element Address of the element to find.
-     * @return true when found; otherwise false.
-     */
-    bool ll_ContainsRef(const LinkedList_t *list, const void *element);
-
-    /**
-     * @brief Inserts a shallow element copy at an index.
-     *
-     * Use ll_InsertValue for supported primitives. Use ll_InsertRef with the
-     * address of element storage for custom or pointer element types.
-     *
-     * @param[in,out] list Target list.
-     * @param index Insertion index from zero through size.
-     * @param element Address of the element to insert.
-     * @return true on success; otherwise false.
-     */
-    bool ll_InsertRef(LinkedList_t *list, size_t index, const void *element);
-
-    /**
-     * @brief Prepends a shallow element copy.
-     *
-     * Use ll_PrependValue for supported primitives. Use ll_PrependRef with the
-     * address of element storage for custom or pointer element types.
-     *
-     * @param[in,out] list Target list.
-     * @param element Address of the element to prepend.
-     * @return true on success; otherwise false.
-     */
-    bool ll_PrependRef(LinkedList_t *list, const void *element);
-
-    /**
-     * @brief Appends a shallow element copy.
-     *
-     * Use ll_AppendValue for supported primitives. Use ll_AppendRef with the
-     * address of element storage for custom or pointer element types.
-     *
-     * @param[in,out] list Target list.
-     * @param element Address of the element to append.
-     * @return true on success; otherwise false.
-     */
-    bool ll_AppendRef(LinkedList_t *list, const void *element);
-
-    /**
-     * @brief Declares pass-by-value variants for one primitive type.
-     * @param Suffix Function-name suffix.
-     * @param Type Primitive parameter type.
-     * @return The generated declarations.
-     */
-#define ADT_PRIMITIVE(Suffix, Type)                                                    \
-    bool ll_IndexOf##Suffix(const LinkedList_t *list, Type element, size_t *outIndex); \
-    bool ll_Contains##Suffix(const LinkedList_t *list, Type element);                  \
-    bool ll_Set##Suffix(LinkedList_t *list, size_t index, Type element);               \
-    bool ll_Insert##Suffix(LinkedList_t *list, size_t index, Type element);            \
-    bool ll_Prepend##Suffix(LinkedList_t *list, Type element);                         \
-    bool ll_Append##Suffix(LinkedList_t *list, Type element);
-    ADT_FOR_EACH_PRIMITIVE(ADT_PRIMITIVE)
-#undef ADT_PRIMITIVE
+#include "detail/linked_list_operations.h"
 
 #ifndef __cplusplus
 /**
- * @brief Finds a primitive value using type-based dispatch.
+ * @brief Finds the first equal element using type-based dispatch.
+ *
+ * Supports any initialized element type. Pass supported primitives by value
+ * and all other element types by address.
+ *
  * @param list List to search.
- * @param element Primitive value.
+ * @param element Value or address matching the initialized element type.
  * @param[out] outIndex Matching index.
  * @return true when found; otherwise false.
  */
-#define ll_IndexOfValue(list, element, outIndex)          \
-    ADT_SELECT_PRIMITIVE_FUNCTION(ll_IndexOf, (element))( \
-        (list),                                           \
-        (element),                                        \
+#define ll_IndexOf(list, element, outIndex)                    \
+    ADT_DETAIL_DISPATCH_ELEMENT(ll_detail_IndexOf, (element))( \
+        (list),                                                \
+        (element),                                             \
         (outIndex))
 
 /**
- * @brief Checks for a primitive value using type-based dispatch.
+ * @brief Checks for an equal element using type-based dispatch.
+ *
+ * Supports any initialized element type. Pass supported primitives by value
+ * and all other element types by address.
+ *
  * @param list List to search.
- * @param element Primitive value.
+ * @param element Value or address matching the initialized element type.
  * @return true when found; otherwise false.
  */
-#define ll_ContainsValue(list, element)                    \
-    ADT_SELECT_PRIMITIVE_FUNCTION(ll_Contains, (element))( \
-        (list),                                            \
+#define ll_Contains(list, element)                              \
+    ADT_DETAIL_DISPATCH_ELEMENT(ll_detail_Contains, (element))( \
+        (list),                                                 \
         (element))
 
 /**
- * @brief Replaces an element with a primitive value.
+ * @brief Replaces an element with a shallow copy.
+ *
+ * Supports any initialized element type. Pass supported primitives by value
+ * and all other element types by address.
+ *
  * @param list Target list.
  * @param index Element index.
- * @param element Primitive replacement value.
+ * @param element Value or address matching the initialized element type.
  * @return true on success; otherwise false.
  */
-#define ll_SetValue(list, index, element)             \
-    ADT_SELECT_PRIMITIVE_FUNCTION(ll_Set, (element))( \
-        (list),                                       \
-        (index),                                      \
+#define ll_Set(list, index, element)                       \
+    ADT_DETAIL_DISPATCH_ELEMENT(ll_detail_Set, (element))( \
+        (list),                                            \
+        (index),                                           \
         (element))
 
 /**
- * @brief Inserts a primitive value at an index.
+ * @brief Inserts a shallow element copy at an index.
+ *
+ * Supports any initialized element type. Pass supported primitives by value
+ * and all other element types by address.
+ *
  * @param list Target list.
- * @param index Insertion index.
- * @param element Primitive value.
+ * @param index Insertion index from zero through size.
+ * @param element Value or address matching the initialized element type.
  * @return true on success; otherwise false.
  */
-#define ll_InsertValue(list, index, element)             \
-    ADT_SELECT_PRIMITIVE_FUNCTION(ll_Insert, (element))( \
-        (list),                                          \
-        (index),                                         \
+#define ll_Insert(list, index, element)                       \
+    ADT_DETAIL_DISPATCH_ELEMENT(ll_detail_Insert, (element))( \
+        (list),                                               \
+        (index),                                              \
         (element))
 
 /**
- * @brief Prepends a primitive value.
+ * @brief Prepends a shallow element copy.
+ *
+ * Supports any initialized element type. Pass supported primitives by value
+ * and all other element types by address.
+ *
  * @param list Target list.
- * @param element Primitive value.
+ * @param element Value or address matching the initialized element type.
  * @return true on success; otherwise false.
  */
-#define ll_PrependValue(list, element)                    \
-    ADT_SELECT_PRIMITIVE_FUNCTION(ll_Prepend, (element))( \
-        (list),                                           \
+#define ll_Prepend(list, element)                              \
+    ADT_DETAIL_DISPATCH_ELEMENT(ll_detail_Prepend, (element))( \
+        (list),                                                \
         (element))
 
 /**
- * @brief Appends a primitive value.
+ * @brief Appends a shallow element copy.
+ *
+ * Supports any initialized element type. Pass supported primitives by value
+ * and all other element types by address.
+ *
  * @param list Target list.
- * @param element Primitive value.
+ * @param element Value or address matching the initialized element type.
  * @return true on success; otherwise false.
  */
-#define ll_AppendValue(list, element)                    \
-    ADT_SELECT_PRIMITIVE_FUNCTION(ll_Append, (element))( \
-        (list),                                          \
+#define ll_Append(list, element)                              \
+    ADT_DETAIL_DISPATCH_ELEMENT(ll_detail_Append, (element))( \
+        (list),                                               \
         (element))
 #endif
 

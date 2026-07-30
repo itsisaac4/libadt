@@ -1,0 +1,16 @@
+#ifndef LIBADT_DETAIL_LINKED_LIST_NODE_H
+#define LIBADT_DETAIL_LINKED_LIST_NODE_H
+
+#include "../linked_list.h"
+
+struct LinkedListNode
+{
+    struct
+    {
+        void *data;
+        LinkedListNode_t *previous;
+        LinkedListNode_t *next;
+    } _private;
+};
+
+#endif

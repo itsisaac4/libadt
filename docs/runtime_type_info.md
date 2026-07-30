@@ -131,9 +131,9 @@ if (!da_Init(&students, studentType))
 }
 ```
 
-Custom values are supplied through the `Ref` APIs:
+Custom values are supplied by address to the unified operation macros:
 
 ```c
 Student_t student = {.id = 1001, .name = "Ada"};
-da_AppendRef(&students, &student);
+da_Append(&students, &student);
 ```
