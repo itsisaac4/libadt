@@ -578,8 +578,8 @@ TEST(AbstractDataType, MinimumSupportsOverlappingOutputStorage)
     DynamicArray_t array = {};
 
     CHECK_TRUE(da_InitFrom(&array, values, 3, type));
-    CHECK_TRUE(adt_Min(&array, array._private.data));
-    LONGS_EQUAL(1, static_cast<int *>(array._private.data)[0]);
+    CHECK_TRUE(adt_Min(&array, array._private.storage.data));
+    LONGS_EQUAL(1, static_cast<int *>(array._private.storage.data)[0]);
 
     da_Destroy(&array);
 }
@@ -687,8 +687,8 @@ TEST(AbstractDataType, MaximumSupportsOverlappingOutputStorage)
     DynamicArray_t array = {};
 
     CHECK_TRUE(da_InitFrom(&array, values, 3, type));
-    CHECK_TRUE(adt_Max(&array, array._private.data));
-    LONGS_EQUAL(9, static_cast<int *>(array._private.data)[0]);
+    CHECK_TRUE(adt_Max(&array, array._private.storage.data));
+    LONGS_EQUAL(9, static_cast<int *>(array._private.storage.data)[0]);
 
     da_Destroy(&array);
 }

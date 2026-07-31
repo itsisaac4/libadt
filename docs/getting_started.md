@@ -1,9 +1,8 @@
 # Getting started
 
-libadt is a C23 container library built around runtime element information.
-Dynamic arrays and linked lists have concrete storage APIs while printing,
-traversal, statistics, and sorting operate through their shared `ADT_Super_t`
-state.
+libadt provides dynamic arrays, linked lists, stacks, and queues. Start with a
+concrete prefix such as `da_*` or `qu_*` for container operations, then use the
+shared `adt_*` API for printing, traversal, statistics, and sorting.
 
 ## Build the project
 
@@ -21,18 +20,20 @@ C23 support.
 To compile a small program directly against the sources:
 
 ```sh
-cc -std=c23 -Iinclude program.c src/shared/*.c src/containers/*.c -o program
+cc -std=c23 -Iinclude program.c \
+    src/shared/*.c src/shared/element/*.c src/shared/storage/*.c \
+    src/containers/*/*.c -o program
 ```
 
 ## Create a container
 
-Include the header for the concrete container you want to use. The
-initialization macros infer type information for supported primitive types:
+Include `libadt/libadt.h` for the full public API. The initialization macros
+fill in type information for supported primitive types:
 
 ```c
 #include <stdlib.h>
 
-#include "libadt/dynamic_array.h"
+#include "libadt/libadt.h"
 
 int main(void)
 {
@@ -54,12 +55,18 @@ int main(void)
 }
 ```
 
-Always zero-initialize the container, check operations that return `bool`, and
-call the matching destroy function when finished.
+Three rules cover most first-time mistakes:
 
-`DA_INIT_FROM` and `LL_INIT_FROM` require a fixed-size C array. Passing a pointer
-would make `ARRAY_COUNT` calculate the size of the pointer rather than the
-number of elements.
+- Zero-initialize the container.
+- Check operations that return `bool`.
+- Call the matching destroy function when finished.
+
+Individual container headers are also available if a program only wants part
+of the API.
+
+One easy trap: `DA_INIT_FROM`, `LL_INIT_FROM`, `ST_INIT_FROM`, and
+`QU_INIT_FROM` require a fixed-size C array. A pointer does not carry its
+element count, so it cannot be used here.
 
 ## Element operations
 
@@ -69,6 +76,8 @@ primitives can be passed directly:
 ```c
 da_Append(&numbers, 42);
 ll_Prepend(&numbersList, 42);
+st_Push(&numberStack, 42);
+qu_Enqueue(&numberQueue, 42);
 ```
 
 The supported primitive types are `char`, `int`, `unsigned int`, `long`,
@@ -82,9 +91,9 @@ Person_t person = {.id = 1001};
 da_Append(&people, &person);
 ```
 
-The argument type must match the type used to initialize the container. The
-container copies `sizeof(Person_t)` bytes from the supplied address; it does not
-perform a deep copy.
+The important rule is that the argument type must match the type used to
+initialize the container. The container copies `sizeof(Person_t)` bytes; it
+does not perform a deep copy.
 
 ## Shared operations
 
@@ -100,14 +109,17 @@ adt_Mode(&numbers, &mode);
 adt_Sort(&numbers, ADT_SORT_INSERTION);
 ```
 
-These functions use the container's traversal vtable and configured type
-callbacks. See [runtime type information](runtime_type_info.md) and
-[polymorphism](polymorphism.md) for the underlying design.
+These functions use the container's traversal vtable and element callbacks.
+See [runtime type information](runtime_type_info.md) and
+[polymorphism](polymorphism.md) for the implementation.
 
 ## Next steps
 
 - [Dynamic arrays](dynamic_array.md)
 - [Linked lists](linked_list.md)
+- [Stacks](stack.md)
+- [Queues](queue.md)
+- [Storage composition](storage.md)
 - [Ownership and shallow copying](ownership.md)
 - [Runtime type information](runtime_type_info.md)
 - [Numeric statistics](statistics.md)

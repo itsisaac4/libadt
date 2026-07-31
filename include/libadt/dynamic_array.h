@@ -6,6 +6,7 @@
 
 #include "abstract_data_type.h"
 #include "internal/primitive_dispatch.h"
+#include "internal/storage/contiguous_storage.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -25,8 +26,7 @@ extern "C"
 
         struct
         {
-            void *data;
-            size_t capacity;
+            ContiguousStorage_t storage;
         } _private;
     } DynamicArray_t;
 
@@ -43,14 +43,14 @@ _Static_assert(offsetof(DynamicArray_t, super) == 0, "DynamicArray_t.super must 
  * @param type Element type.
  * @return true on success; otherwise false.
  */
-#define DA_INIT(array, type)             \
-    da_Init(                             \
-        (array),                         \
-        ADT_ELEMENT_TYPE_INFO(            \
-            type,                        \
-            COMPARATOR(type),            \
-            PRINTER(type),               \
-            TO_NUMBER(type),             \
+#define DA_INIT(array, type)   \
+    da_Init(                   \
+        (array),               \
+        ADT_ELEMENT_TYPE_INFO( \
+            type,              \
+            COMPARATOR(type),  \
+            PRINTER(type),     \
+            TO_NUMBER(type),   \
             NULL))
 
 /**
@@ -59,16 +59,16 @@ _Static_assert(offsetof(DynamicArray_t, super) == 0, "DynamicArray_t.super must 
  * @param values Values to copy.
  * @return true on success; otherwise false.
  */
-#define DA_INIT_FROM(array, values)                            \
-    da_InitFrom(                                               \
-        (array),                                               \
-        (values),                                              \
-        ARRAY_COUNT(values),                                   \
-        ADT_ELEMENT_TYPE_INFO(                                 \
-            typeof_unqual((values)[0]),                        \
-            COMPARATOR(typeof_unqual((values)[0])),            \
-            PRINTER(typeof_unqual((values)[0])),               \
-            TO_NUMBER(typeof_unqual((values)[0])),             \
+#define DA_INIT_FROM(array, values)                 \
+    da_InitFrom(                                    \
+        (array),                                    \
+        (values),                                   \
+        ARRAY_COUNT(values),                        \
+        ADT_ELEMENT_TYPE_INFO(                      \
+            typeof_unqual((values)[0]),             \
+            COMPARATOR(typeof_unqual((values)[0])), \
+            PRINTER(typeof_unqual((values)[0])),    \
+            TO_NUMBER(typeof_unqual((values)[0])),  \
             NULL))
 #endif
 

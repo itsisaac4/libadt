@@ -47,9 +47,9 @@ TEST_GROUP(DynamicArrayInitialization)
 
     void setup()
     {
-        array._private.data = NULL;
+        array._private.storage.data = NULL;
         array.super._private.size = 0;
-        array._private.capacity = 0;
+        array._private.storage.capacity = 0;
         array.super._private.elementType = InvalidTypeInfo();
     }
 
@@ -63,9 +63,9 @@ TEST(DynamicArrayInitialization, InitCreatesEmptyArray)
 {
     CHECK_TRUE(da_Init(&array, IntTypeInfo()));
 
-    CHECK(array._private.data != NULL);
+    CHECK(array._private.storage.data != NULL);
     UNSIGNED_LONGS_EQUAL(0, array.super._private.size);
-    UNSIGNED_LONGS_EQUAL(INITIAL_CAPACITY, array._private.capacity);
+    UNSIGNED_LONGS_EQUAL(INITIAL_CAPACITY, array._private.storage.capacity);
     UNSIGNED_LONGS_EQUAL(sizeof(int), array.super._private.elementType.elementSize);
 }
 
@@ -75,10 +75,10 @@ TEST(DynamicArrayInitialization, InitFromCopiesIntegerElements)
 
     CHECK_TRUE(da_InitFrom(&array, input, 4, IntTypeInfo()));
 
-    int *stored = static_cast<int *>(array._private.data);
+    int *stored = static_cast<int *>(array._private.storage.data);
 
     UNSIGNED_LONGS_EQUAL(4, array.super._private.size);
-    CHECK(array._private.capacity >= array.super._private.size);
+    CHECK(array._private.storage.capacity >= array.super._private.size);
     UNSIGNED_LONGS_EQUAL(sizeof(int), array.super._private.elementType.elementSize);
 
     LONGS_EQUAL(10, stored[0]);
@@ -93,11 +93,11 @@ TEST(DynamicArrayInitialization, InitFromMakesIndependentCopy)
 
     CHECK_TRUE(da_InitFrom(&array, input, 3, IntTypeInfo()));
 
-    CHECK(array._private.data != input);
+    CHECK(array._private.storage.data != input);
 
     input[0] = 999;
 
-    int *stored = static_cast<int *>(array._private.data);
+    int *stored = static_cast<int *>(array._private.storage.data);
 
     LONGS_EQUAL(10, stored[0]);
 }
@@ -114,7 +114,7 @@ TEST(DynamicArrayInitialization, InitFromUsesEnoughCapacity)
     CHECK_TRUE(da_InitFrom(&array, input, 20, IntTypeInfo()));
 
     UNSIGNED_LONGS_EQUAL(20, array.super._private.size);
-    CHECK(array._private.capacity >= array.super._private.size);
+    CHECK(array._private.storage.capacity >= array.super._private.size);
 }
 
 TEST(DynamicArrayInitialization, InitFromPreservesAllElementsAboveInitialCapacity)
@@ -129,10 +129,10 @@ TEST(DynamicArrayInitialization, InitFromPreservesAllElementsAboveInitialCapacit
 
     CHECK_TRUE(da_InitFrom(&array, input, count, IntTypeInfo()));
 
-    int *stored = static_cast<int *>(array._private.data);
+    int *stored = static_cast<int *>(array._private.storage.data);
 
     UNSIGNED_LONGS_EQUAL(count, array.super._private.size);
-    CHECK(array._private.capacity >= count);
+    CHECK(array._private.storage.capacity >= count);
 
     for (size_t i = 0; i < count; i++)
     {
@@ -148,8 +148,15 @@ TEST(DynamicArrayInitialization, InitFromAllowsZeroElements)
     CHECK_TRUE(da_InitFrom(&array, input, 0, IntTypeInfo()));
 
     UNSIGNED_LONGS_EQUAL(0, array.super._private.size);
-    CHECK(array._private.capacity >= INITIAL_CAPACITY);
+    POINTERS_EQUAL(NULL, array._private.storage.data);
+    UNSIGNED_LONGS_EQUAL(0, array._private.storage.capacity);
     UNSIGNED_LONGS_EQUAL(sizeof(int), array.super._private.elementType.elementSize);
+
+    int value = 4;
+    CHECK_TRUE(da_detail_AppendRef(&array, &value));
+    int actual = 0;
+    CHECK_TRUE(da_Get(&array, 0, &actual));
+    LONGS_EQUAL(value, actual);
 }
 
 TEST(DynamicArrayInitialization, InitRejectsNullArray)
@@ -161,9 +168,9 @@ TEST(DynamicArrayInitialization, InitRejectsZeroElementSize)
 {
     CHECK_FALSE(da_Init(&array, InvalidTypeInfo()));
 
-    POINTERS_EQUAL(NULL, array._private.data);
+    POINTERS_EQUAL(NULL, array._private.storage.data);
     UNSIGNED_LONGS_EQUAL(0, array.super._private.size);
-    UNSIGNED_LONGS_EQUAL(0, array._private.capacity);
+    UNSIGNED_LONGS_EQUAL(0, array._private.storage.capacity);
     UNSIGNED_LONGS_EQUAL(0, array.super._private.elementType.elementSize);
 }
 
@@ -177,7 +184,7 @@ TEST(DynamicArrayInitialization, InitRejectsElementSizeOverflow)
         NULL};
 
     CHECK_FALSE(da_Init(&array, elementType));
-    POINTERS_EQUAL(NULL, array._private.data);
+    POINTERS_EQUAL(NULL, array._private.storage.data);
 }
 
 TEST(DynamicArrayInitialization, InitFromRejectsNullArray)
@@ -189,9 +196,9 @@ TEST(DynamicArrayInitialization, InitFromRejectsNullElementsWithCount)
 {
     CHECK_FALSE(da_InitFrom(&array, NULL, 3, IntTypeInfo()));
 
-    POINTERS_EQUAL(NULL, array._private.data);
+    POINTERS_EQUAL(NULL, array._private.storage.data);
     UNSIGNED_LONGS_EQUAL(0, array.super._private.size);
-    UNSIGNED_LONGS_EQUAL(0, array._private.capacity);
+    UNSIGNED_LONGS_EQUAL(0, array._private.storage.capacity);
 }
 
 TEST(DynamicArrayInitialization, InitFromRejectsCapacityOverflow)
@@ -204,7 +211,7 @@ TEST(DynamicArrayInitialization, InitFromRejectsCapacityOverflow)
         static_cast<size_t>(-1),
         IntTypeInfo()));
 
-    POINTERS_EQUAL(NULL, array._private.data);
+    POINTERS_EQUAL(NULL, array._private.storage.data);
 }
 
 TEST(DynamicArrayInitialization, InitFromSupportsDoubleElements)
@@ -213,7 +220,7 @@ TEST(DynamicArrayInitialization, InitFromSupportsDoubleElements)
 
     CHECK_TRUE(da_InitFrom(&array, input, 3, DoubleTypeInfo()));
 
-    double *stored = static_cast<double *>(array._private.data);
+    double *stored = static_cast<double *>(array._private.storage.data);
 
     UNSIGNED_LONGS_EQUAL(3, array.super._private.size);
     UNSIGNED_LONGS_EQUAL(sizeof(double), array.super._private.elementType.elementSize);
@@ -229,9 +236,9 @@ TEST(DynamicArrayInitialization, DestroyResetsArray)
 
     da_Destroy(&array);
 
-    POINTERS_EQUAL(NULL, array._private.data);
+    POINTERS_EQUAL(NULL, array._private.storage.data);
     UNSIGNED_LONGS_EQUAL(0, array.super._private.size);
-    UNSIGNED_LONGS_EQUAL(0, array._private.capacity);
+    UNSIGNED_LONGS_EQUAL(0, array._private.storage.capacity);
     UNSIGNED_LONGS_EQUAL(0, array.super._private.elementType.elementSize);
 }
 
@@ -247,9 +254,9 @@ TEST(DynamicArrayInitialization, DestroyCanBeCalledTwice)
     da_Destroy(&array);
     da_Destroy(&array);
 
-    POINTERS_EQUAL(NULL, array._private.data);
+    POINTERS_EQUAL(NULL, array._private.storage.data);
     UNSIGNED_LONGS_EQUAL(0, array.super._private.size);
-    UNSIGNED_LONGS_EQUAL(0, array._private.capacity);
+    UNSIGNED_LONGS_EQUAL(0, array._private.storage.capacity);
     UNSIGNED_LONGS_EQUAL(0, array.super._private.elementType.elementSize);
 }
 
@@ -263,9 +270,9 @@ TEST_GROUP(DynamicArrayInsertion)
 
     void setup()
     {
-        array._private.data = NULL;
+        array._private.storage.data = NULL;
         array.super._private.size = 0;
-        array._private.capacity = 0;
+        array._private.storage.capacity = 0;
         array.super._private.elementType = InvalidTypeInfo();
 
         CHECK_TRUE(da_Init(&array, IntTypeInfo()));
@@ -278,7 +285,7 @@ TEST_GROUP(DynamicArrayInsertion)
 
     int *values()
     {
-        return static_cast<int *>(array._private.data);
+        return static_cast<int *>(array._private.storage.data);
     }
 };
 
@@ -415,8 +422,9 @@ TEST(DynamicArrayInsertion, AppendRejectsSizeOverflow)
                 .size = static_cast<size_t>(-1),
                 .elementType = elementType}},
         ._private = {
-            .data = &storage,
-            .capacity = static_cast<size_t>(-1)}};
+            .storage = {
+                .data = &storage,
+                .capacity = static_cast<size_t>(-1)}}};
     unsigned char value = 1;
 
     CHECK_FALSE(da_detail_AppendRef(&fullArray, &value));
@@ -472,7 +480,7 @@ TEST(DynamicArrayInsertion, InsertRejectsNullElement)
 
 TEST(DynamicArrayInsertion, AppendExpandsCapacity)
 {
-    size_t originalCapacity = array._private.capacity;
+    size_t originalCapacity = array._private.storage.capacity;
 
     for (size_t i = 0; i <= originalCapacity; i++)
     {
@@ -486,8 +494,8 @@ TEST(DynamicArrayInsertion, AppendExpandsCapacity)
         originalCapacity + 1,
         array.super._private.size);
 
-    CHECK(array._private.capacity > originalCapacity);
-    CHECK(array._private.capacity >= array.super._private.size);
+    CHECK(array._private.storage.capacity > originalCapacity);
+    CHECK(array._private.storage.capacity >= array.super._private.size);
 
     for (size_t i = 0; i < array.super._private.size; i++)
     {
@@ -499,7 +507,7 @@ TEST(DynamicArrayInsertion, AppendExpandsCapacity)
 
 TEST(DynamicArrayInsertion, PrependWhileFullExpandsAndPreservesData)
 {
-    size_t originalCapacity = array._private.capacity;
+    size_t originalCapacity = array._private.storage.capacity;
 
     for (size_t i = 0; i < originalCapacity; i++)
     {
@@ -518,7 +526,7 @@ TEST(DynamicArrayInsertion, PrependWhileFullExpandsAndPreservesData)
         originalCapacity + 1,
         array.super._private.size);
 
-    CHECK(array._private.capacity > originalCapacity);
+    CHECK(array._private.storage.capacity > originalCapacity);
 
     LONGS_EQUAL(0, values()[0]);
 
@@ -532,7 +540,7 @@ TEST(DynamicArrayInsertion, PrependWhileFullExpandsAndPreservesData)
 
 TEST(DynamicArrayInsertion, InsertInMiddleWhileFullExpandsAndPreservesData)
 {
-    size_t originalCapacity = array._private.capacity;
+    size_t originalCapacity = array._private.storage.capacity;
 
     for (size_t i = 0; i < originalCapacity; i++)
     {
@@ -551,7 +559,7 @@ TEST(DynamicArrayInsertion, InsertInMiddleWhileFullExpandsAndPreservesData)
         originalCapacity + 1,
         array.super._private.size);
 
-    CHECK(array._private.capacity > originalCapacity);
+    CHECK(array._private.storage.capacity > originalCapacity);
 
     LONGS_EQUAL(0, values()[0]);
     LONGS_EQUAL(1, values()[1]);
@@ -584,7 +592,7 @@ TEST(DynamicArrayInsertion, InsertCopiesAnElementAlreadyStoredInTheArray)
 
 TEST(DynamicArrayInsertion, InsertPreservesInternalSourceAcrossReallocation)
 {
-    const size_t initialCapacity = array._private.capacity;
+    const size_t initialCapacity = array._private.storage.capacity;
 
     for (size_t i = 0; i < initialCapacity; i++)
     {
@@ -614,9 +622,9 @@ TEST_GROUP(DynamicArrayDoubleInsertion)
 
     void setup()
     {
-        array._private.data = NULL;
+        array._private.storage.data = NULL;
         array.super._private.size = 0;
-        array._private.capacity = 0;
+        array._private.storage.capacity = 0;
         array.super._private.elementType = InvalidTypeInfo();
 
         CHECK_TRUE(da_Init(&array, DoubleTypeInfo()));
@@ -629,7 +637,7 @@ TEST_GROUP(DynamicArrayDoubleInsertion)
 
     double *values()
     {
-        return static_cast<double *>(array._private.data);
+        return static_cast<double *>(array._private.storage.data);
     }
 };
 
@@ -688,9 +696,9 @@ TEST_GROUP(DynamicArrayRemoval)
 
     void setup()
     {
-        array._private.data = NULL;
+        array._private.storage.data = NULL;
         array.super._private.size = 0;
-        array._private.capacity = 0;
+        array._private.storage.capacity = 0;
         array.super._private.elementType = InvalidTypeInfo();
 
         CHECK_TRUE(da_Init(&array, IntTypeInfo()));
@@ -703,7 +711,7 @@ TEST_GROUP(DynamicArrayRemoval)
 
     int *values()
     {
-        return static_cast<int *>(array._private.data);
+        return static_cast<int *>(array._private.storage.data);
     }
 
     void appendValues()
@@ -824,14 +832,14 @@ TEST(DynamicArrayRemoval, ClearRemovesAllElements)
 {
     appendValues();
 
-    size_t oldCapacity = array._private.capacity;
-    void *oldData = array._private.data;
+    size_t oldCapacity = array._private.storage.capacity;
+    void *oldData = array._private.storage.data;
 
     da_Clear(&array);
 
     UNSIGNED_LONGS_EQUAL(0, array.super._private.size);
-    UNSIGNED_LONGS_EQUAL(oldCapacity, array._private.capacity);
-    POINTERS_EQUAL(oldData, array._private.data);
+    UNSIGNED_LONGS_EQUAL(oldCapacity, array._private.storage.capacity);
+    POINTERS_EQUAL(oldData, array._private.storage.data);
     UNSIGNED_LONGS_EQUAL(sizeof(int), array.super._private.elementType.elementSize);
 
     CHECK_TRUE(
@@ -840,14 +848,14 @@ TEST(DynamicArrayRemoval, ClearRemovesAllElements)
 
 TEST(DynamicArrayRemoval, ClearEmptyArrayIsSafe)
 {
-    size_t oldCapacity = array._private.capacity;
-    void *oldData = array._private.data;
+    size_t oldCapacity = array._private.storage.capacity;
+    void *oldData = array._private.storage.data;
 
     da_Clear(&array);
 
     UNSIGNED_LONGS_EQUAL(0, array.super._private.size);
-    UNSIGNED_LONGS_EQUAL(oldCapacity, array._private.capacity);
-    POINTERS_EQUAL(oldData, array._private.data);
+    UNSIGNED_LONGS_EQUAL(oldCapacity, array._private.storage.capacity);
+    POINTERS_EQUAL(oldData, array._private.storage.data);
     UNSIGNED_LONGS_EQUAL(sizeof(int), array.super._private.elementType.elementSize);
 }
 
@@ -860,8 +868,8 @@ TEST(DynamicArrayRemoval, ArrayCanBeReusedAfterClear)
 {
     appendValues();
 
-    size_t oldCapacity = array._private.capacity;
-    void *oldData = array._private.data;
+    size_t oldCapacity = array._private.storage.capacity;
+    void *oldData = array._private.storage.data;
 
     da_Clear(&array);
 
@@ -871,8 +879,8 @@ TEST(DynamicArrayRemoval, ArrayCanBeReusedAfterClear)
         da_detail_AppendRef(&array, &newValue));
 
     UNSIGNED_LONGS_EQUAL(1, array.super._private.size);
-    UNSIGNED_LONGS_EQUAL(oldCapacity, array._private.capacity);
-    POINTERS_EQUAL(oldData, array._private.data);
+    UNSIGNED_LONGS_EQUAL(oldCapacity, array._private.storage.capacity);
+    POINTERS_EQUAL(oldData, array._private.storage.data);
     LONGS_EQUAL(99, values()[0]);
 }
 
@@ -880,15 +888,15 @@ TEST(DynamicArrayRemoval, RemoveDoesNotChangeCapacity)
 {
     appendValues();
 
-    size_t oldCapacity = array._private.capacity;
-    void *oldData = array._private.data;
+    size_t oldCapacity = array._private.storage.capacity;
+    void *oldData = array._private.storage.data;
 
     CHECK_TRUE(
         da_Remove(&array, 1));
 
     UNSIGNED_LONGS_EQUAL(3, array.super._private.size);
-    UNSIGNED_LONGS_EQUAL(oldCapacity, array._private.capacity);
-    POINTERS_EQUAL(oldData, array._private.data);
+    UNSIGNED_LONGS_EQUAL(oldCapacity, array._private.storage.capacity);
+    POINTERS_EQUAL(oldData, array._private.storage.data);
 }
 
 TEST(DynamicArrayRemoval, MultipleRemovalsPreserveRemainingOrder)
@@ -946,7 +954,7 @@ TEST(DynamicArrayRemoval, TakeRejectsInvalidArgumentsAndContainerStorage)
     CHECK_FALSE(da_Take(NULL, 0, &output));
     CHECK_FALSE(da_Take(&array, 0, NULL));
     CHECK_FALSE(da_Take(&array, array.super._private.size, &output));
-    CHECK_FALSE(da_Take(&array, 0, array._private.data));
+    CHECK_FALSE(da_Take(&array, 0, array._private.storage.data));
     UNSIGNED_LONGS_EQUAL(4, array.super._private.size);
 }
 /* =========================================================
@@ -977,9 +985,9 @@ TEST_GROUP(DynamicArrayTypeInfo)
 
     void setup()
     {
-        array._private.data = NULL;
+        array._private.storage.data = NULL;
         array.super._private.size = 0;
-        array._private.capacity = 0;
+        array._private.storage.capacity = 0;
         array.super._private.elementType = InvalidTypeInfo();
 
         printCallCount = 0;
@@ -1015,7 +1023,7 @@ TEST(DynamicArrayTypeInfo, DestroyCallsConfiguredDestructorForEveryElement)
     da_Destroy(&array);
 
     LONGS_EQUAL(3, destroyCallCount);
-    POINTERS_EQUAL(NULL, array._private.data);
+    POINTERS_EQUAL(NULL, array._private.storage.data);
     UNSIGNED_LONGS_EQUAL(0, array.super._private.elementType.elementSize);
 }
 
@@ -1042,7 +1050,7 @@ TEST(DynamicArrayTypeInfo, SetDestroysReplacedElement)
     CHECK_TRUE(da_detail_SetRef(&array, 0, &replacement));
 
     LONGS_EQUAL(1, destroyCallCount);
-    POINTERS_EQUAL(replacement, static_cast<int **>(array._private.data)[0]);
+    POINTERS_EQUAL(replacement, static_cast<int **>(array._private.storage.data)[0]);
 
     da_Destroy(&array);
     LONGS_EQUAL(2, destroyCallCount);
@@ -1064,7 +1072,7 @@ TEST(DynamicArrayTypeInfo, SetFromSameElementDoesNotDestroyIt)
     *value = 10;
 
     CHECK_TRUE(da_detail_AppendRef(&array, &value));
-    CHECK_TRUE(da_detail_SetRef(&array, 0, array._private.data));
+    CHECK_TRUE(da_detail_SetRef(&array, 0, array._private.storage.data));
 
     LONGS_EQUAL(0, destroyCallCount);
 
@@ -1096,8 +1104,8 @@ TEST(DynamicArrayTypeInfo, RemoveDestroysRemovedElementOnly)
 
     LONGS_EQUAL(1, destroyCallCount);
     UNSIGNED_LONGS_EQUAL(2, array.super._private.size);
-    POINTERS_EQUAL(values[0], static_cast<int **>(array._private.data)[0]);
-    POINTERS_EQUAL(values[2], static_cast<int **>(array._private.data)[1]);
+    POINTERS_EQUAL(values[0], static_cast<int **>(array._private.storage.data)[0]);
+    POINTERS_EQUAL(values[2], static_cast<int **>(array._private.storage.data)[1]);
 
     da_Destroy(&array);
     LONGS_EQUAL(3, destroyCallCount);
@@ -1148,15 +1156,15 @@ TEST(DynamicArrayTypeInfo, ClearDestroysElementsAndRetainsStorage)
         CHECK_TRUE(da_detail_AppendRef(&array, &value));
     }
 
-    void *const storage = array._private.data;
-    const size_t capacity = array._private.capacity;
+    void *const storage = array._private.storage.data;
+    const size_t capacity = array._private.storage.capacity;
 
     da_Clear(&array);
 
     LONGS_EQUAL(3, destroyCallCount);
     UNSIGNED_LONGS_EQUAL(0, array.super._private.size);
-    UNSIGNED_LONGS_EQUAL(capacity, array._private.capacity);
-    POINTERS_EQUAL(storage, array._private.data);
+    UNSIGNED_LONGS_EQUAL(capacity, array._private.storage.capacity);
+    POINTERS_EQUAL(storage, array._private.storage.data);
 
     da_Destroy(&array);
     LONGS_EQUAL(3, destroyCallCount);

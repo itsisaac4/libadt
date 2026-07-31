@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "libadt/dynamic_array.h"
+#include "libadt/libadt.h"
 
 typedef struct
 {

@@ -1,8 +1,14 @@
 # Ownership and shallow copying
 
-libadt separates container storage from resources referenced by an element.
-Understanding that distinction is essential when storing structures that
-contain pointers.
+Container storage and resources referenced by an element are two different
+kinds of ownership. This matters when a stored structure contains pointers.
+
+The short version:
+
+- The container always owns its raw element storage.
+- A shallow copy duplicates bytes, not pointed-to allocations.
+- `destroy` describes resources owned by one logical element.
+- `Take`, `Pop`, and `Dequeue` transfer ownership instead of destroying it.
 
 ## What the container owns
 
@@ -10,6 +16,8 @@ Every container owns the bytes used to store its elements:
 
 - A dynamic array owns its contiguous allocation.
 - A linked list owns its nodes and each node's element allocation.
+- A stack owns its contiguous allocation.
+- A queue owns its nodes and each node's element allocation.
 
 Insertion operations copy an element's bytes into that storage. The source
 object itself is never retained.
@@ -34,10 +42,10 @@ typedef struct
 } Student_t;
 ```
 
-Copying `Student_t` copies the pointer, not the string it points to. The
-container does not know how to clone that string. A configured `destroy`
-callback tells the container how to release resources owned by a stored
-element:
+Copying `Student_t` creates a shallow copy: it copies the pointer, not the
+string it points to. Both structures temporarily alias the same allocation.
+A configured `destroy` callback tells the container how to release resources
+owned by the stored element:
 
 ```c
 static void DestroyStudent(void *element)
@@ -48,8 +56,8 @@ static void DestroyStudent(void *element)
 }
 ```
 
-After a successful append, ownership of `student.name` is logically handed to
-the stored element:
+After a successful append, the stored element becomes responsible for
+`student.name`:
 
 ```c
 Student_t student = {
@@ -63,29 +71,28 @@ if (!ll_Append(&students, &student))
 }
 ```
 
-Do not free `student.name` after a successful append. The local structure still
-contains a shallow alias, but the container's stored element is now responsible
-for releasing the allocation.
+Do not free `student.name` after a successful append. The local structure is
+now a non-owning alias; ownership has transferred to the stored element.
 
 ## Operation ownership rules
 
 | Operation | Resource behavior |
 | --- | --- |
-| `Append`, `Prepend`, `Insert` | Copies the element; on success the stored copy assumes responsibility for resources described by `destroy`. |
+| `Append`, `Prepend`, `Insert`, `Push`, `Enqueue` | Copies the element; on success the stored copy assumes responsibility for resources described by `destroy`. |
 | `Set` | Destroys resources owned by the replaced element, then stores the shallow replacement copy. |
-| `Get` | Returns a shallow, non-owning copy. The element remains in the container. |
+| `Get`, `Peek`, `Front`, `Back` | Returns a shallow, non-owning copy. The element remains in the container. |
 | `Min`, `Max` | Return shallow, non-owning copies. |
-| `Remove` | Destroys the removed element's resources. |
-| `Take` | Removes the element without calling `destroy`; ownership transfers to the output value. |
+| `Remove`, `Discard` | Destroys the removed element's resources. |
+| `Take`, `Pop`, `Dequeue` | Removes the element without calling `destroy`; ownership transfers to the output value. |
 | `Clear` | Destroys every element but leaves the container initialized. |
 | `Destroy` | Destroys every element, releases container storage, and resets the container. |
 
-When an insertion or replacement operation fails, the caller retains
-responsibility for the source element's resources.
+The rule at the failure boundary is simple: when insertion or replacement
+fails, the caller still owns the source element's resources.
 
-## Taking ownership out of a container
+## Taking a value out of a container
 
-Use `Take` when the removed element must remain usable:
+Use `Take`, `Pop`, or `Dequeue` when the removed element must remain usable:
 
 ```c
 Student_t transferred = {0};
@@ -97,13 +104,13 @@ if (ll_Take(&students, 0, &transferred))
 }
 ```
 
-Calling `Remove` instead would release `transferred` resources before returning
-and would not provide the removed element.
+Calling `Remove` or `Discard` instead would release the element's resources and
+would not provide the removed value.
 
 ## Avoid duplicate ownership
 
-Do not insert multiple shallow copies that all claim ownership of the same
-resource:
+The most common ownership bug is inserting multiple shallow copies that all
+claim the same resource:
 
 ```c
 Student_t student = MakeStudent(1001, "Ada");
@@ -114,9 +121,9 @@ ll_Append(&students, &student); /* unsafe when both copies destroy name */
 The two stored structures would contain the same `name` pointer, causing it to
 be freed twice. Create a separate deep copy for each owning element.
 
-The same rule applies when inserting an element already stored inside a
-container. Internal-source insertion is safe for primitives and non-owning
-structures, but it does not clone pointed-to resources.
+The same rule applies when inserting an element that is already stored in a
+container. The byte copy is safe, but it does not clone anything referenced by
+the element.
 
 `InitFrom` also performs shallow copies. If the source elements contain owned
 resources and the type has a destroy callback, a successful initialization
@@ -125,16 +132,15 @@ be treated as containing non-owning aliases.
 
 ## Container lifecycle
 
-Use this lifecycle:
+The normal lifecycle is:
 
 1. Zero-initialize the container.
 2. Call `Init`, `InitFrom`, or its type-inference macro.
 3. Use the container.
 4. Call `Clear` to reuse it or `Destroy` when finished.
 
-Do not call `Init` again on a live container. Initialization replaces the
-container fields and cannot release storage whose address it is about to
-overwrite. Call `Destroy` first.
+Do not call `Init` again on a live container. It would overwrite the only
+references to the existing storage. Call `Destroy` first.
 
 Calling `Destroy` repeatedly is safe after a successful initialization because
 the first call resets the container to zero.

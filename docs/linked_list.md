@@ -1,14 +1,17 @@
 # Linked lists
 
-`LinkedList_t` stores elements in a doubly linked sequence. Each node owns a
-separate element allocation, and the list tracks both its head and tail.
+`LinkedList_t` is a doubly linked list with stored head and tail pointers. Each
+node has its own element allocation.
+
+Choose it when insertion at either end matters more than indexed access or
+contiguous memory locality.
 
 ## Quick start
 
 ```c
 #include <stdlib.h>
 
-#include "libadt/linked_list.h"
+#include "libadt/libadt.h"
 
 int main(void)
 {
@@ -96,7 +99,7 @@ if (ll_Init(&students, studentType))
 
 After a successful append, the stored shallow copy is responsible for resources
 described by `DestroyStudent`. See [custom element types](custom_types.md) and
-[ownership](ownership.md) for the complete contract.
+[ownership](ownership.md) for the ownership rules.
 
 ## Complexity
 
@@ -109,9 +112,11 @@ described by `DestroyStudent`. See [custom element types](custom_types.md) and
 | Remove or take by index | O(min(i, n - i)) |
 | Clear or destroy | O(n) |
 
-Indexed lookup starts from the closer end of the list. Unlike the dynamic
-array, linked-list insertion does not shift existing elements, but each new
-element requires node and element allocations.
+Two representation details explain most of the complexity:
+
+- Indexed lookup starts from whichever end is closer.
+- Insertion does not shift existing elements, but each element needs a node
+  allocation and an element allocation.
 
 `Clear` releases every node while retaining runtime type information. The list
 can immediately be reused. `Destroy` also resets the shared type information.

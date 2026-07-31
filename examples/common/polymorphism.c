@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "libadt/dynamic_array.h"
-#include "libadt/linked_list.h"
+#include "libadt/libadt.h"
 
 static bool PrintExtrema(const ADT_t *adt)
 {
@@ -58,18 +57,26 @@ int main(void)
 {
     int arrayValues[] = {8, 2, 6, 4};
     int listValues[] = {7, 1, 5, 3};
+    int stackValues[] = {9, 3, 7, 5};
+    int queueValues[] = {10, 4, 8, 6};
     DynamicArray_t array = {0};
     LinkedList_t list = {0};
+    Stack_t stack = {0};
+    Queue_t queue = {0};
 
     if (!DA_INIT_FROM(&array, arrayValues) ||
-        !LL_INIT_FROM(&list, listValues))
+        !LL_INIT_FROM(&list, listValues) ||
+        !ST_INIT_FROM(&stack, stackValues) ||
+        !QU_INIT_FROM(&queue, queueValues))
     {
         da_Destroy(&array);
         ll_Destroy(&list);
+        st_Destroy(&stack);
+        qu_Destroy(&queue);
         return EXIT_FAILURE;
     }
 
-    ADT_t *containers[] = {&array, &list};
+    ADT_t *containers[] = {&array, &list, &stack, &queue};
 
     for (size_t i = 0; i < ARRAY_COUNT(containers); i++)
     {
@@ -77,11 +84,15 @@ int main(void)
         {
             da_Destroy(&array);
             ll_Destroy(&list);
+            st_Destroy(&stack);
+            qu_Destroy(&queue);
             return EXIT_FAILURE;
         }
     }
 
     da_Destroy(&array);
     ll_Destroy(&list);
+    st_Destroy(&stack);
+    qu_Destroy(&queue);
     return EXIT_SUCCESS;
 }

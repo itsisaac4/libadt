@@ -1,7 +1,8 @@
 # Runtime type information
 
-C does not attach runtime behavior to arbitrary values. libadt supplies that
-behavior explicitly through `ADT_ElementTypeInfo_t`:
+Container internals operate on type-erased elements through `void *`.
+`ADT_ElementTypeInfo_t` is the runtime descriptor that preserves the element
+size and behavior needed to interpret those bytes:
 
 ```c
 typedef struct
@@ -14,8 +15,15 @@ typedef struct
 } ADT_ElementTypeInfo_t;
 ```
 
-Every initialized container stores one copy of this information in its
-`ADT_Super_t`.
+Every initialized container stores this descriptor in `ADT_Super_t`.
+
+Think of the descriptor as five answers the erased type can no longer provide:
+
+- How many bytes make one element?
+- How are two elements ordered?
+- How is one element printed?
+- How can it be projected to a number?
+- How are its owned resources released?
 
 ## Type information fields
 
@@ -48,7 +56,8 @@ static int CompareStudent(const void *first, const void *second)
 ```
 
 `adt_Min`, `adt_Max`, and `adt_Sort` require a comparator. `IndexOf` and
-`Contains` use byte comparison when no comparator is configured.
+`Contains` can fall back to byte comparison, but semantic comparison is
+usually the better choice for structures with padding or pointer members.
 
 `adt_MinBy`, `adt_MaxBy`, and `adt_SortBy` accept a per-call comparator without
 changing the type information stored by the container.
@@ -71,8 +80,7 @@ returns `false` when no printer is configured.
 
 ### `toNumber`
 
-The numeric projection converts an element to the common `double`
-representation used by numeric statistics:
+The numeric conversion returns the `double` used by the statistics functions:
 
 ```c
 static double StudentScoreToNumber(const void *element)
@@ -82,8 +90,9 @@ static double StudentScoreToNumber(const void *element)
 }
 ```
 
-Use `NULL` when the type has no meaningful numeric representation. A custom
-type can choose a specific numeric field without changing its stored layout.
+Use `NULL` when numeric statistics do not make sense for the type. A custom
+type can project a specific field—such as a student's score—without changing
+the stored structure.
 
 ### `destroy`
 
@@ -100,7 +109,8 @@ See [ownership](ownership.md) for the complete destruction and transfer rules.
 
 ## Primitive type inference
 
-`DA_INIT`, `DA_INIT_FROM`, `LL_INIT`, and `LL_INIT_FROM` infer callbacks for:
+`DA_INIT`, `DA_INIT_FROM`, `LL_INIT`, `LL_INIT_FROM`, `ST_INIT`,
+`ST_INIT_FROM`, `QU_INIT`, and `QU_INIT_FROM` infer callbacks for:
 
 - `char`
 - `int`
@@ -118,11 +128,11 @@ DA_INIT(&numbers, int);
 
 This configures `sizeof(int)`, `CompareInt`, `PrintInt`, `ToNumberInt`, and a
 `NULL` destructor. Primitive value functions use the same registry for
-`_Generic` dispatch.
+compile-time `_Generic` dispatch.
 
-Pointer comparators and printers are available as `ComparePointer` and
-`PrintPointer`, but pointer ownership and meaning are application-specific, so
-they must be configured explicitly.
+`ComparePointer` and `PrintPointer` are available for pointer values. The
+library intentionally does not infer pointer ownership; an address alone does
+not say whether it is borrowed, shared, or uniquely owned.
 
 ## Custom type example
 

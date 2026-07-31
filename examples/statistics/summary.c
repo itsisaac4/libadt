@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "libadt/dynamic_array.h"
-#include "libadt/linked_list.h"
+#include "libadt/libadt.h"
 
 static bool PrintSummary(const char *label, const ADT_t *values)
 {

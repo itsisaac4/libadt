@@ -1,7 +1,6 @@
 #include <stdbool.h>
 
-#include "libadt/dynamic_array.h"
-#include "libadt/linked_list.h"
+#include "libadt/libadt.h"
 
 typedef struct
 {
@@ -106,6 +105,97 @@ bool C23LinkedListInitFromInfersIntType(void)
     return inferredInt;
 }
 
+bool C23StackInitInfersIntType(void)
+{
+    Stack_t stack = {0};
+
+    if (!ST_INIT(&stack, int))
+    {
+        return false;
+    }
+
+    const bool inferredInt =
+        stack.super._private.elementType.elementSize == sizeof(int) &&
+        stack.super._private.elementType.compare == CompareInt &&
+        stack.super._private.elementType.print == PrintInt &&
+        stack.super._private.elementType.toNumber == ToNumberInt &&
+        stack.super._private.size == 0;
+
+    st_Destroy(&stack);
+    return inferredInt;
+}
+
+bool C23StackInitFromInfersIntType(void)
+{
+    int values[] = {10, 20, 30};
+    Stack_t stack = {0};
+
+    if (!ST_INIT_FROM(&stack, values))
+    {
+        return false;
+    }
+
+    int top = 0;
+    const bool inferredInt =
+        stack.super._private.elementType.elementSize == sizeof(int) &&
+        stack.super._private.elementType.compare == CompareInt &&
+        stack.super._private.elementType.print == PrintInt &&
+        stack.super._private.elementType.toNumber == ToNumberInt &&
+        stack.super._private.size == ARRAY_COUNT(values) &&
+        st_Peek(&stack, &top) &&
+        top == 30;
+
+    st_Destroy(&stack);
+    return inferredInt;
+}
+
+bool C23QueueInitInfersIntType(void)
+{
+    Queue_t queue = {0};
+
+    if (!QU_INIT(&queue, int))
+    {
+        return false;
+    }
+
+    const bool inferredInt =
+        queue.super._private.elementType.elementSize == sizeof(int) &&
+        queue.super._private.elementType.compare == CompareInt &&
+        queue.super._private.elementType.print == PrintInt &&
+        queue.super._private.elementType.toNumber == ToNumberInt &&
+        queue.super._private.size == 0;
+
+    qu_Destroy(&queue);
+    return inferredInt;
+}
+
+bool C23QueueInitFromInfersIntType(void)
+{
+    int values[] = {10, 20, 30};
+    Queue_t queue = {0};
+
+    if (!QU_INIT_FROM(&queue, values))
+    {
+        return false;
+    }
+
+    int front = 0;
+    int back = 0;
+    const bool inferredInt =
+        queue.super._private.elementType.elementSize == sizeof(int) &&
+        queue.super._private.elementType.compare == CompareInt &&
+        queue.super._private.elementType.print == PrintInt &&
+        queue.super._private.elementType.toNumber == ToNumberInt &&
+        queue.super._private.size == ARRAY_COUNT(values) &&
+        qu_Front(&queue, &front) &&
+        qu_Back(&queue, &back) &&
+        front == 10 &&
+        back == 30;
+
+    qu_Destroy(&queue);
+    return inferredInt;
+}
+
 #define DEFINE_PRIMITIVE_DISPATCH_CHECK(Suffix, Type)                  \
     static bool CheckDynamicArray##Suffix(void)                         \
     {                                                                  \
@@ -151,6 +241,56 @@ bool C23LinkedListInitFromInfersIntType(void)
             ll_Contains(&list, value);                                 \
         ll_Destroy(&list);                                             \
         return works;                                                  \
+    }                                                                  \
+                                                                       \
+    static bool CheckStack##Suffix(void)                               \
+    {                                                                  \
+        const ADT_ElementTypeInfo_t type = {                           \
+            .elementSize = sizeof(Type),                               \
+            .compare = Compare##Suffix,                                \
+            .print = Print##Suffix,                                    \
+            .toNumber = ToNumber##Suffix,                              \
+            .destroy = NULL};                                          \
+        Stack_t stack = {0};                                           \
+        Type value = (Type)7;                                          \
+        Type actual = (Type)0;                                         \
+                                                                       \
+        if (!st_Init(&stack, type))                                    \
+        {                                                              \
+            return false;                                              \
+        }                                                              \
+                                                                       \
+        const bool works =                                             \
+            st_Push(&stack, value) &&                                  \
+            st_Pop(&stack, &actual) &&                                 \
+            actual == value;                                           \
+        st_Destroy(&stack);                                            \
+        return works;                                                  \
+    }                                                                  \
+                                                                       \
+    static bool CheckQueue##Suffix(void)                               \
+    {                                                                  \
+        const ADT_ElementTypeInfo_t type = {                           \
+            .elementSize = sizeof(Type),                               \
+            .compare = Compare##Suffix,                                \
+            .print = Print##Suffix,                                    \
+            .toNumber = ToNumber##Suffix,                              \
+            .destroy = NULL};                                          \
+        Queue_t queue = {0};                                           \
+        Type value = (Type)7;                                          \
+        Type actual = (Type)0;                                         \
+                                                                       \
+        if (!qu_Init(&queue, type))                                    \
+        {                                                              \
+            return false;                                              \
+        }                                                              \
+                                                                       \
+        const bool works =                                             \
+            qu_Enqueue(&queue, value) &&                               \
+            qu_Dequeue(&queue, &actual) &&                             \
+            actual == value;                                           \
+        qu_Destroy(&queue);                                            \
+        return works;                                                  \
     }
 DEFINE_PRIMITIVE_DISPATCH_CHECK(Char, char)
 DEFINE_PRIMITIVE_DISPATCH_CHECK(Int, int)
@@ -163,9 +303,12 @@ DEFINE_PRIMITIVE_DISPATCH_CHECK(Double, double)
 bool C23PrimitiveTypesDispatchByValue(void)
 {
 #define CHECK_PRIMITIVE_DISPATCH(Suffix, Type) \
-    if (!CheckDynamicArray##Suffix() || !CheckLinkedList##Suffix()) \
-    {                                                               \
-        return false;                                               \
+    if (!CheckDynamicArray##Suffix() ||                             \
+        !CheckLinkedList##Suffix() ||                               \
+        !CheckStack##Suffix() ||                                    \
+        !CheckQueue##Suffix())                                      \
+    {                                                              \
+        return false;                                              \
     }
     CHECK_PRIMITIVE_DISPATCH(Char, char)
     CHECK_PRIMITIVE_DISPATCH(Int, int)
@@ -188,13 +331,20 @@ bool C23PrimitiveOperationsDispatchByValue(void)
         .destroy = NULL};
     DynamicArray_t array = {0};
     LinkedList_t list = {0};
+    Stack_t stack = {0};
+    Queue_t queue = {0};
     size_t arrayIndex = 0;
     size_t listIndex = 0;
 
-    if (!da_Init(&array, type) || !ll_Init(&list, type))
+    if (!da_Init(&array, type) ||
+        !ll_Init(&list, type) ||
+        !st_Init(&stack, type) ||
+        !qu_Init(&queue, type))
     {
         da_Destroy(&array);
         ll_Destroy(&list);
+        st_Destroy(&stack);
+        qu_Destroy(&queue);
         return false;
     }
 
@@ -216,9 +366,23 @@ bool C23PrimitiveOperationsDispatchByValue(void)
         ll_IndexOf(&list, 4, &listIndex) &&
         listIndex == 2;
 
+    int stackValue = 0;
+    const bool stackWorks =
+        st_Push(&stack, 3) &&
+        st_Pop(&stack, &stackValue) &&
+        stackValue == 3;
+
+    int queueValue = 0;
+    const bool queueWorks =
+        qu_Enqueue(&queue, 4) &&
+        qu_Dequeue(&queue, &queueValue) &&
+        queueValue == 4;
+
     da_Destroy(&array);
     ll_Destroy(&list);
-    return arrayWorks && listWorks;
+    st_Destroy(&stack);
+    qu_Destroy(&queue);
+    return arrayWorks && listWorks && stackWorks && queueWorks;
 }
 
 bool C23ElementTypeInfoConstructorDefinesAllCapabilities(void)
@@ -248,6 +412,8 @@ bool C23CustomOperationsDispatchByAddress(void)
         .destroy = NULL};
     DynamicArray_t array = {0};
     LinkedList_t list = {0};
+    Stack_t stack = {0};
+    Queue_t queue = {0};
     MacroStruct one = {.value = 1};
     MacroStruct two = {.value = 2};
     MacroStruct three = {.value = 3};
@@ -255,10 +421,15 @@ bool C23CustomOperationsDispatchByAddress(void)
     size_t arrayIndex = 0;
     size_t listIndex = 0;
 
-    if (!da_Init(&array, type) || !ll_Init(&list, type))
+    if (!da_Init(&array, type) ||
+        !ll_Init(&list, type) ||
+        !st_Init(&stack, type) ||
+        !qu_Init(&queue, type))
     {
         da_Destroy(&array);
         ll_Destroy(&list);
+        st_Destroy(&stack);
+        qu_Destroy(&queue);
         return false;
     }
 
@@ -280,9 +451,23 @@ bool C23CustomOperationsDispatchByAddress(void)
         ll_IndexOf(&list, &four, &listIndex) &&
         listIndex == 2;
 
+    MacroStruct stackValue = {0};
+    const bool stackWorks =
+        st_Push(&stack, &three) &&
+        st_Pop(&stack, &stackValue) &&
+        stackValue.value == three.value;
+
+    MacroStruct queueValue = {0};
+    const bool queueWorks =
+        qu_Enqueue(&queue, &four) &&
+        qu_Dequeue(&queue, &queueValue) &&
+        queueValue.value == four.value;
+
     da_Destroy(&array);
     ll_Destroy(&list);
-    return arrayWorks && listWorks;
+    st_Destroy(&stack);
+    qu_Destroy(&queue);
+    return arrayWorks && listWorks && stackWorks && queueWorks;
 }
 
 bool C23FunctionPointersDispatchByAddress(void)
@@ -294,26 +479,43 @@ bool C23FunctionPointersDispatchByAddress(void)
         .destroy = NULL};
     DynamicArray_t array = {0};
     LinkedList_t list = {0};
+    Stack_t stack = {0};
+    Queue_t queue = {0};
     MacroFunctionFn_t function = Increment;
     MacroFunctionFn_t arrayFunction = NULL;
     MacroFunctionFn_t listFunction = NULL;
+    MacroFunctionFn_t stackFunction = NULL;
+    MacroFunctionFn_t queueFunction = NULL;
 
-    if (!da_Init(&array, type) || !ll_Init(&list, type))
+    if (!da_Init(&array, type) ||
+        !ll_Init(&list, type) ||
+        !st_Init(&stack, type) ||
+        !qu_Init(&queue, type))
     {
         da_Destroy(&array);
         ll_Destroy(&list);
+        st_Destroy(&stack);
+        qu_Destroy(&queue);
         return false;
     }
 
     const bool works =
         da_Append(&array, &function) &&
         ll_Append(&list, &function) &&
+        st_Push(&stack, &function) &&
+        qu_Enqueue(&queue, &function) &&
         da_Get(&array, 0, &arrayFunction) &&
         ll_Get(&list, 0, &listFunction) &&
+        st_Pop(&stack, &stackFunction) &&
+        qu_Dequeue(&queue, &queueFunction) &&
         arrayFunction(41) == 42 &&
-        listFunction(41) == 42;
+        listFunction(41) == 42 &&
+        stackFunction(41) == 42 &&
+        queueFunction(41) == 42;
 
     da_Destroy(&array);
     ll_Destroy(&list);
+    st_Destroy(&stack);
+    qu_Destroy(&queue);
     return works;
 }

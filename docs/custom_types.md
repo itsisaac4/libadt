@@ -1,14 +1,19 @@
-248 checks pass, and every example compiles with strict warnings.
-
 # Custom element types
 
-libadt can store any complete C object type. A custom type must provide its
-size, while callbacks opt it into shared behaviors such as comparison,
-printing, numeric statistics, and resource destruction.
+libadt can store any complete C object type. A custom
+`ADT_ElementTypeInfo_t` acts as its runtime descriptor by providing the size
+and callback contracts needed after type erasure.
+
+For most custom types, setup is four steps:
+
+1. Define the C type.
+2. Implement only the callbacks its operations need.
+3. Collect them in an `ADT_ElementTypeInfo_t`.
+4. Initialize a container with that descriptor.
 
 ## Define the element type
 
-Give the stored structure a typedef ending in `_t`:
+This project uses the `_t` suffix for type names:
 
 ```c
 typedef struct
@@ -33,8 +38,8 @@ double StudentScoreToNumber(const void *element);
 void DestroyStudent(void *element);
 ```
 
-Each callback receives the address of a stored `Student_t`, so it casts the
-generic pointer before accessing fields.
+Each callback receives the type-erased address of a stored `Student_t`, so it
+casts the generic pointer before accessing fields.
 
 ### Comparison
 
@@ -77,8 +82,8 @@ double StudentScoreToNumber(const void *element)
 }
 ```
 
-The projection gives numeric statistics one common `double` representation.
-It can select whichever field is meaningful for the application.
+The conversion returns the `double` used by the statistics functions. It can
+return whichever field the program wants to analyze.
 
 ### Resource destruction
 
@@ -96,7 +101,7 @@ that storage belongs to the container.
 
 ## Create the element descriptor
 
-`ADT_ELEMENT_TYPE_INFO` requires an explicit decision for every capability:
+`ADT_ELEMENT_TYPE_INFO` takes the stored type and all four optional callbacks:
 
 ```c
 const ADT_ElementTypeInfo_t studentType = ADT_ELEMENT_TYPE_INFO(
@@ -107,8 +112,8 @@ const ADT_ElementTypeInfo_t studentType = ADT_ELEMENT_TYPE_INFO(
     DestroyStudent);
 ```
 
-Only `elementSize` is universally required. Pass `NULL` for behavior that does
-not apply:
+Only `elementSize` is always required. Do not invent meaningless callbacks
+just to fill the descriptor; pass `NULL` for behavior that does not apply:
 
 ```c
 const ADT_ElementTypeInfo_t pointType = ADT_ELEMENT_TYPE_INFO(
@@ -119,7 +124,7 @@ const ADT_ElementTypeInfo_t pointType = ADT_ELEMENT_TYPE_INFO(
     NULL);
 ```
 
-Callbacks act as optional interfaces:
+Each callback enables a group of operations:
 
 | Descriptor field | Enables |
 | --- | --- |
@@ -129,7 +134,9 @@ Callbacks act as optional interfaces:
 | `toNumber` | Numeric statistics |
 | `destroy` | Cleanup of resources owned by elements |
 
-An operation returns `false` when its required callback is unavailable.
+An operation returns `false` when its required callback is unavailable. That
+keeps an unsupported concept—such as the mean of an arbitrary record—from
+silently producing a made-up result.
 
 ## Initialize and use a container
 
@@ -156,8 +163,9 @@ if (!da_Append(&students, &student))
 ```
 
 After a successful insertion, the stored shallow copy assumes responsibility
-for resources described by `destroy`. See [ownership](ownership.md) before
-storing structures that contain owning pointers.
+for resources described by `destroy`. This is the point where reading
+[ownership](ownership.md) saves real debugging time, especially when the
+structure contains owning pointers.
 
 ## Share a custom type across source files
 
@@ -168,7 +176,7 @@ in an application header:
 #ifndef STUDENT_H
 #define STUDENT_H
 
-#include "libadt/abstract_data_type.h"
+#include "libadt/libadt.h"
 
 typedef struct
 {
@@ -202,13 +210,13 @@ const ADT_ElementTypeInfo_t STUDENT_ELEMENT_TYPE =
 Use `static` callbacks instead when the custom type is needed in only one
 source file. This keeps those names private to that translation unit.
 
-## Language constraint
+## Why custom types need a descriptor
 
-C can infer `sizeof(Student_t)`, but it cannot infer whether students compare
-by ID or name, print in a particular format, project to score or age, or own
-their pointer fields. An OOP language also requires those methods to be
-implemented, but usually constructs the associated vtable automatically.
+C can calculate `sizeof(Student_t)`, but it cannot guess whether students
+should compare by ID or name, how they should print, which field is numeric, or
+whether they own pointer fields.
 
-`ADT_ElementTypeInfo_t` makes that relationship explicit. It serves as the
-element type's manually constructed interface table while allowing different
-descriptors or per-operation overrides for different behaviors.
+`ADT_ElementTypeInfo_t` connects those choices to the stored type. In a
+class-based language, similar behavior might live in methods or interfaces.
+In C, the descriptor makes that contract explicit instead of pretending the
+compiler can infer it.

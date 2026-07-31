@@ -1,14 +1,17 @@
 # Dynamic arrays
 
-`DynamicArray_t` stores elements contiguously and grows its allocation when
-more capacity is needed.
+`DynamicArray_t` stores elements in one allocation and grows that allocation
+when it runs out of capacity.
+
+Choose it when indexed access and cache-friendly traversal matter more than
+the cost of shifting elements during middle insertions.
 
 ## Quick start
 
 ```c
 #include <stdlib.h>
 
-#include "libadt/dynamic_array.h"
+#include "libadt/libadt.h"
 
 int main(void)
 {
@@ -59,7 +62,8 @@ if (da_Get(&numbers, 2, &value))
 }
 ```
 
-This does not remove the element or transfer resources it owns.
+This is a non-owning shallow copy. It does not remove the element or transfer
+its resources.
 
 Use `da_Remove` when the removed element should be destroyed. Use `da_Take`
 when its value and owned resources should transfer to the caller:
@@ -115,9 +119,11 @@ using a non-`NULL` destroy callback.
 | Remove | O(n) |
 | Clear or destroy | O(n) when elements require destruction |
 
-Capacity grows geometrically, so repeated append operations do not reallocate
-for every element. `Clear` retains the current allocation for reuse;
-`Destroy` releases it.
+In practice:
+
+- Capacity doubles as needed, so every append does not cause a reallocation.
+- `Clear` keeps the allocation for reuse.
+- `Destroy` releases the allocation and resets the array.
 
 ## Lifecycle
 

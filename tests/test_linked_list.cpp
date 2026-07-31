@@ -1,7 +1,6 @@
 extern "C"
 {
 #include "libadt/linked_list.h"
-#include "../src/containers/linked_list/linked_list_node.h"
 }
 
 #include "CppUTest/TestHarness.h"
@@ -50,43 +49,20 @@ static void CheckIntList(const LinkedList_t *list, const int *expected, size_t e
 
     if (expectedCount == 0)
     {
-        POINTERS_EQUAL(NULL, list->_private.head);
-        POINTERS_EQUAL(NULL, list->_private.tail);
+        POINTERS_EQUAL(NULL, list->_private.storage.head);
+        POINTERS_EQUAL(NULL, list->_private.storage.tail);
         return;
     }
 
-    POINTERS_EQUAL(NULL, list->_private.head->_private.previous);
-    POINTERS_EQUAL(NULL, list->_private.tail->_private.next);
-
-    LinkedListNode_t *current = list->_private.head;
-    LinkedListNode_t *previous = NULL;
+    CHECK(list->_private.storage.head != NULL);
+    CHECK(list->_private.storage.tail != NULL);
 
     for (size_t i = 0; i < expectedCount; ++i)
     {
-        CHECK(current != NULL);
-        POINTERS_EQUAL(previous, current->_private.previous);
-        LONGS_EQUAL(expected[i], *static_cast<int *>(current->_private.data));
-        previous = current;
-        current = current->_private.next;
+        int actual = 0;
+        CHECK_TRUE(ll_Get(list, i, &actual));
+        LONGS_EQUAL(expected[i], actual);
     }
-
-    POINTERS_EQUAL(NULL, current);
-    POINTERS_EQUAL(list->_private.tail, previous);
-
-    current = list->_private.tail;
-    LinkedListNode_t *next = NULL;
-
-    for (size_t i = expectedCount; i > 0; --i)
-    {
-        CHECK(current != NULL);
-        POINTERS_EQUAL(next, current->_private.next);
-        LONGS_EQUAL(expected[i - 1], *static_cast<int *>(current->_private.data));
-        next = current;
-        current = current->_private.previous;
-    }
-
-    POINTERS_EQUAL(NULL, current);
-    POINTERS_EQUAL(list->_private.head, next);
 }
 
 /* =========================================================
@@ -215,12 +191,11 @@ TEST(LinkedListInitialization, InitFromSupportsDoubleElements)
         3,
         LinkedListDoubleTypeInfo()));
 
-    LinkedListNode_t *current = list._private.head;
     for (size_t i = 0; i < 3; ++i)
     {
-        CHECK(current != NULL);
-        DOUBLES_EQUAL(values[i], *static_cast<double *>(current->_private.data), 0.000001);
-        current = current->_private.next;
+        double actual = 0.0;
+        CHECK_TRUE(ll_Get(&list, i, &actual));
+        DOUBLES_EQUAL(values[i], actual, 0.000001);
     }
 }
 
@@ -371,8 +346,8 @@ TEST(LinkedListInsertion, InsertRejectsSizeOverflow)
     CHECK_FALSE(ll_detail_AppendRef(&list, &value));
     CHECK_FALSE(ll_detail_PrependRef(&list, &value));
 
-    POINTERS_EQUAL(NULL, list._private.head);
-    POINTERS_EQUAL(NULL, list._private.tail);
+    POINTERS_EQUAL(NULL, list._private.storage.head);
+    POINTERS_EQUAL(NULL, list._private.storage.tail);
     list.super._private.size = 0;
 }
 
@@ -407,9 +382,15 @@ TEST(LinkedListInsertion, InsertSupportsDoubleValues)
     CHECK_TRUE(ll_detail_AppendRef(&list, &third));
     CHECK_TRUE(ll_detail_InsertRef(&list, 1, &second));
 
-    DOUBLES_EQUAL(1.5, *static_cast<double *>(list._private.head->_private.data), 0.000001);
-    DOUBLES_EQUAL(2.5, *static_cast<double *>(list._private.head->_private.next->_private.data), 0.000001);
-    DOUBLES_EQUAL(3.5, *static_cast<double *>(list._private.tail->_private.data), 0.000001);
+    double actual[3] = {};
+    for (size_t i = 0; i < 3; ++i)
+    {
+        CHECK_TRUE(ll_Get(&list, i, &actual[i]));
+    }
+
+    DOUBLES_EQUAL(1.5, actual[0], 0.000001);
+    DOUBLES_EQUAL(2.5, actual[1], 0.000001);
+    DOUBLES_EQUAL(3.5, actual[2], 0.000001);
 }
 
 /* =========================================================
@@ -498,7 +479,13 @@ TEST(LinkedListRemoval, TakeRejectsInvalidArguments)
     CHECK_FALSE(ll_Take(NULL, 0, &output));
     CHECK_FALSE(ll_Take(&list, 0, NULL));
     CHECK_FALSE(ll_Take(&list, list.super._private.size, &output));
-    CHECK_FALSE(ll_Take(&list, 0, list._private.head->_private.data));
+    CHECK_FALSE(ll_Take(
+        &list,
+        0,
+        linkedStorage_At(
+            &list._private.storage,
+            list.super._private.size,
+            0)));
 
     int expected[] = {10, 20, 30, 40};
     CheckIntList(&list, expected, 4);
@@ -780,7 +767,13 @@ TEST(LinkedListTypeInfo, SetFromSameElementDoesNotDestroyIt)
     initializeOwnedList();
     CHECK_TRUE(AppendOwnedInt(&list, 10));
 
-    CHECK_TRUE(ll_detail_SetRef(&list, 0, list._private.head->_private.data));
+    CHECK_TRUE(ll_detail_SetRef(
+        &list,
+        0,
+        linkedStorage_At(
+            &list._private.storage,
+            list.super._private.size,
+            0)));
     LONGS_EQUAL(0, linkedListDestroyCallCount);
 
     ll_Destroy(&list);

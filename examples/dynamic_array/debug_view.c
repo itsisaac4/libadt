@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "libadt/dynamic_array.h"
+#include "libadt/libadt.h"
 
 int main(void)
 {

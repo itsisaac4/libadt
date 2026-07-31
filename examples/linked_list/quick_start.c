@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "libadt/linked_list.h"
+#include "libadt/libadt.h"
 
 int main(void)
 {

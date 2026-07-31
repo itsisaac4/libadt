@@ -1,8 +1,8 @@
 # Numeric statistics
 
-libadt calculates numeric statistics through the shared ADT traversal
-interface. The same functions operate on dynamic arrays, linked lists, and
-future traversable containers.
+The statistics functions work on all four containers through the shared
+traversal interface. The key idea is a numeric projection: the container does
+not need to store `double`; it only needs a way to view each element as one.
 
 ## Numeric projections
 
@@ -26,6 +26,9 @@ static double StudentScoreToNumber(const void *element)
 
 Store the default projection in `ADT_ElementTypeInfo_t.toNumber`.
 
+For a `Student_t`, that choice might be score, age, or GPA. The library does
+not pretend there is one universally correct numeric meaning for a structure.
+
 ## Default and override operations
 
 Default operations use the configured projection:
@@ -48,8 +51,8 @@ adt_MedianBy(&students, StudentAgeToNumber, &median);
 adt_ModeBy(&students, StudentAgeToNumber, &mode);
 ```
 
-This allows one custom element type to expose several numeric views without
-changing its stored descriptor.
+This lets one structure use different fields for different calls without
+reconfiguring the container.
 
 ## Mean
 
@@ -70,8 +73,8 @@ buffer without changing the container.
 - An odd-sized collection returns its middle projected value.
 - An even-sized collection averages its two middle projected values.
 
-The even calculation divides each middle value before adding them, reducing
-the chance of intermediate overflow.
+For an even count, each middle value is divided before addition to reduce the
+chance of intermediate overflow.
 
 ## Mode
 

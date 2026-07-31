@@ -6,14 +6,12 @@
 
 #include "abstract_data_type.h"
 #include "internal/primitive_dispatch.h"
+#include "internal/storage/linked_storage.h"
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-
-    /** @brief Opaque node type managed by a linked list. */
-    typedef struct LinkedListNode LinkedListNode_t;
 
     /**
      * @brief Stores elements in a doubly linked sequence.
@@ -28,8 +26,7 @@ extern "C"
 
         struct
         {
-            LinkedListNode_t *head;
-            LinkedListNode_t *tail;
+            LinkedStorage_t storage;
         } _private;
     } LinkedList_t;
 
@@ -46,14 +43,14 @@ _Static_assert(offsetof(LinkedList_t, super) == 0, "LinkedList_t.super must be f
  * @param type Element type.
  * @return true on success; otherwise false.
  */
-#define LL_INIT(list, type)              \
-    ll_Init(                             \
-        (list),                          \
-        ADT_ELEMENT_TYPE_INFO(            \
-            type,                        \
-            COMPARATOR(type),            \
-            PRINTER(type),               \
-            TO_NUMBER(type),             \
+#define LL_INIT(list, type)    \
+    ll_Init(                   \
+        (list),                \
+        ADT_ELEMENT_TYPE_INFO( \
+            type,              \
+            COMPARATOR(type),  \
+            PRINTER(type),     \
+            TO_NUMBER(type),   \
             NULL))
 
 /**
@@ -62,16 +59,16 @@ _Static_assert(offsetof(LinkedList_t, super) == 0, "LinkedList_t.super must be f
  * @param values Values to copy.
  * @return true on success; otherwise false.
  */
-#define LL_INIT_FROM(list, values)                             \
-    ll_InitFrom(                                               \
-        (list),                                                \
-        (values),                                              \
-        ARRAY_COUNT(values),                                   \
-        ADT_ELEMENT_TYPE_INFO(                                 \
-            typeof_unqual((values)[0]),                        \
-            COMPARATOR(typeof_unqual((values)[0])),            \
-            PRINTER(typeof_unqual((values)[0])),               \
-            TO_NUMBER(typeof_unqual((values)[0])),             \
+#define LL_INIT_FROM(list, values)                  \
+    ll_InitFrom(                                    \
+        (list),                                     \
+        (values),                                   \
+        ARRAY_COUNT(values),                        \
+        ADT_ELEMENT_TYPE_INFO(                      \
+            typeof_unqual((values)[0]),             \
+            COMPARATOR(typeof_unqual((values)[0])), \
+            PRINTER(typeof_unqual((values)[0])),    \
+            TO_NUMBER(typeof_unqual((values)[0])),  \
             NULL))
 #endif
 

@@ -14,8 +14,11 @@ TEST_DIR := tests
 SRC_DIRS := \
 	$(SRC_DIR)/shared \
 	$(SRC_DIR)/shared/element \
+	$(SRC_DIR)/shared/storage \
 	$(SRC_DIR)/containers/dynamic_array \
-	$(SRC_DIR)/containers/linked_list
+	$(SRC_DIR)/containers/linked_list \
+	$(SRC_DIR)/containers/stack \
+	$(SRC_DIR)/containers/queue
 
 TARGET := $(BUILD_DIR)/libcollections
 TEST_TARGET := $(BUILD_DIR)/run_tests

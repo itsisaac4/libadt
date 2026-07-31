@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "libadt/dynamic_array.h"
+#include "libadt/libadt.h"
 
 typedef struct
 {
