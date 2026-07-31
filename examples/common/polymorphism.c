@@ -6,7 +6,7 @@
 
 static bool PrintExtrema(const ADT_t *adt)
 {
-    const ADT_TypeInfo_t *type = adt_Type(adt);
+    const ADT_ElementTypeInfo_t *type = adt_ElementType(adt);
 
     if (type == NULL ||
         type->elementSize == 0 ||

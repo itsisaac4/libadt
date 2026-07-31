@@ -1,5 +1,5 @@
 #include "libadt/dynamic_array.h"
-#include "libadt/primitive_dispatch.h"
+#include "libadt/internal/primitive_dispatch.h"
 
 #define DEFINE_DYNAMIC_ARRAY_PRIMITIVE(Suffix, Type)                                            \
     bool da_detail_IndexOf##Suffix(const DynamicArray_t *array, Type element, size_t *outIndex) \

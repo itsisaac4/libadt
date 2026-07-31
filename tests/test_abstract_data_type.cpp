@@ -104,16 +104,17 @@ TEST(AbstractDataType, NullSharedStateIsEmpty)
 {
     UNSIGNED_LONGS_EQUAL(0, adt_Size(NULL));
     CHECK_TRUE(adt_IsEmpty(NULL));
-    POINTERS_EQUAL(NULL, adt_Type(NULL));
+    POINTERS_EQUAL(NULL, adt_ElementType(NULL));
 }
 
 TEST(AbstractDataType, ContainersExposeSharedState)
 {
     int values[] = {10, 20, 30};
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
     DynamicArray_t array = {};
     LinkedList_t list = {};
@@ -136,9 +137,9 @@ TEST(AbstractDataType, ContainersExposeSharedState)
     {
         UNSIGNED_LONGS_EQUAL(3, adt_Size(container));
         CHECK_FALSE(adt_IsEmpty(container));
-        UNSIGNED_LONGS_EQUAL(sizeof(int), adt_Type(container)->elementSize);
-        FUNCTIONPOINTERS_EQUAL(CompareInt, adt_Type(container)->compare);
-        FUNCTIONPOINTERS_EQUAL(PrintInt, adt_Type(container)->print);
+        UNSIGNED_LONGS_EQUAL(sizeof(int), adt_ElementType(container)->elementSize);
+        FUNCTIONPOINTERS_EQUAL(CompareInt, adt_ElementType(container)->compare);
+        FUNCTIONPOINTERS_EQUAL(PrintInt, adt_ElementType(container)->print);
     }
 
     da_Destroy(&array);
@@ -147,10 +148,11 @@ TEST(AbstractDataType, ContainersExposeSharedState)
 
 TEST(AbstractDataType, SharedSizeTracksContainerOperations)
 {
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
     DynamicArray_t array = {};
     LinkedList_t list = {};
@@ -177,10 +179,11 @@ TEST(AbstractDataType, SharedSizeTracksContainerOperations)
 TEST(AbstractDataType, DynamicArrayVTableProvidesReadOnlyTraversal)
 {
     int values[] = {10, 20, 30};
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
     DynamicArray_t array = {};
     VisitContext_t visit = {};
@@ -205,10 +208,11 @@ TEST(AbstractDataType, DynamicArrayVTableProvidesReadOnlyTraversal)
 TEST(AbstractDataType, DynamicArrayVTableProvidesMutableTraversal)
 {
     int values[] = {10, 20, 30};
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
     DynamicArray_t array = {};
     size_t visits = 0;
@@ -233,10 +237,11 @@ TEST(AbstractDataType, DynamicArrayVTableProvidesMutableTraversal)
 TEST(AbstractDataType, LinkedListVTableProvidesReadOnlyTraversal)
 {
     int values[] = {10, 20, 30};
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
     LinkedList_t list = {};
     VisitContext_t visit = {};
@@ -261,10 +266,11 @@ TEST(AbstractDataType, LinkedListVTableProvidesReadOnlyTraversal)
 TEST(AbstractDataType, LinkedListVTableProvidesMutableTraversal)
 {
     int values[] = {10, 20, 30};
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
     LinkedList_t list = {};
     size_t visits = 0;
@@ -289,10 +295,11 @@ TEST(AbstractDataType, LinkedListVTableProvidesMutableTraversal)
 TEST(AbstractDataType, SharedDispatcherTraversesEveryContainer)
 {
     int values[] = {10, 20, 30};
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
     DynamicArray_t array = {};
     LinkedList_t list = {};
@@ -324,10 +331,11 @@ TEST(AbstractDataType, SharedDispatcherTraversesEveryContainer)
 TEST(AbstractDataType, SharedMutableDispatcherTraversesEveryContainer)
 {
     int values[] = {10, 20, 30};
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
     DynamicArray_t array = {};
     LinkedList_t list = {};
@@ -367,10 +375,11 @@ TEST(AbstractDataType, SharedDispatchersRejectInvalidCalls)
     DynamicArray_t destroyed = {};
     VisitContext_t visit = {};
     size_t mutableVisits = 0;
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
 
     CHECK_TRUE(da_Init(&destroyed, type));
@@ -390,10 +399,11 @@ TEST(AbstractDataType, SharedDispatchersRejectInvalidCalls)
 TEST(AbstractDataType, SharedPrintUsesContainerAndElementPolymorphism)
 {
     int values[] = {10, 20, 30};
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
     DynamicArray_t array = {};
     LinkedList_t list = {};
@@ -417,10 +427,11 @@ TEST(AbstractDataType, SharedPrintUsesContainerAndElementPolymorphism)
 
 TEST(AbstractDataType, SharedPrintHandlesEmptyContainers)
 {
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
     DynamicArray_t array = {};
 
@@ -437,10 +448,11 @@ TEST(AbstractDataType, SharedPrintHandlesEmptyContainers)
 
 TEST(AbstractDataType, SharedPrintRejectsInvalidConfigurationsSilently)
 {
-    ADT_TypeInfo_t typeWithoutPrinter = {
+    ADT_ElementTypeInfo_t typeWithoutPrinter = {
         sizeof(int),
         CompareInt,
         NULL,
+        ToNumberInt,
         NULL};
     DynamicArray_t array = {};
 
@@ -462,10 +474,11 @@ TEST(AbstractDataType, SharedPrintRejectsInvalidConfigurationsSilently)
 TEST(AbstractDataType, SharedDebugPrintSupportsLinkedLists)
 {
     int values[] = {3, 5, 8};
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
     LinkedList_t list = {};
 
@@ -487,10 +500,11 @@ TEST(AbstractDataType, SharedDebugPrintSupportsLinkedLists)
 TEST(AbstractDataType, SharedMinimumSupportsEveryContainer)
 {
     int values[] = {8, 3, 5, 2, 9};
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
     DynamicArray_t array = {};
     LinkedList_t list = {};
@@ -516,10 +530,11 @@ TEST(AbstractDataType, SharedMinimumSupportsEveryContainer)
 TEST(AbstractDataType, MinimumComparatorCanBeOverriddenPerCall)
 {
     int values[] = {8, 3, 5, 2, 9};
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
     LinkedList_t list = {};
     int minimum = 0;
@@ -534,10 +549,11 @@ TEST(AbstractDataType, MinimumComparatorCanBeOverriddenPerCall)
 TEST(AbstractDataType, MinimumOverrideWorksWithoutConfiguredComparator)
 {
     int values[] = {8, 3, 5, 2, 9};
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         NULL,
         PrintInt,
+        ToNumberInt,
         NULL};
     DynamicArray_t array = {};
     int minimum = 0;
@@ -553,10 +569,11 @@ TEST(AbstractDataType, MinimumOverrideWorksWithoutConfiguredComparator)
 TEST(AbstractDataType, MinimumSupportsOverlappingOutputStorage)
 {
     int values[] = {5, 1, 3};
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
     DynamicArray_t array = {};
 
@@ -569,10 +586,11 @@ TEST(AbstractDataType, MinimumSupportsOverlappingOutputStorage)
 
 TEST(AbstractDataType, MinimumRejectsInvalidCalls)
 {
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
     DynamicArray_t empty = {};
     int minimum = 0;
@@ -591,10 +609,11 @@ TEST(AbstractDataType, MinimumRejectsInvalidCalls)
 TEST(AbstractDataType, SharedMaximumSupportsEveryContainer)
 {
     int values[] = {8, 3, 5, 2, 9};
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
     DynamicArray_t array = {};
     LinkedList_t list = {};
@@ -620,10 +639,11 @@ TEST(AbstractDataType, SharedMaximumSupportsEveryContainer)
 TEST(AbstractDataType, MaximumComparatorCanBeOverriddenPerCall)
 {
     int values[] = {8, 3, 5, 2, 9};
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
     LinkedList_t list = {};
     int maximum = 0;
@@ -638,10 +658,11 @@ TEST(AbstractDataType, MaximumComparatorCanBeOverriddenPerCall)
 TEST(AbstractDataType, MaximumOverrideWorksWithoutConfiguredComparator)
 {
     int values[] = {8, 3, 5, 2, 9};
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         NULL,
         PrintInt,
+        ToNumberInt,
         NULL};
     DynamicArray_t array = {};
     int maximum = 0;
@@ -657,10 +678,11 @@ TEST(AbstractDataType, MaximumOverrideWorksWithoutConfiguredComparator)
 TEST(AbstractDataType, MaximumSupportsOverlappingOutputStorage)
 {
     int values[] = {5, 9, 3};
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
     DynamicArray_t array = {};
 
@@ -673,10 +695,11 @@ TEST(AbstractDataType, MaximumSupportsOverlappingOutputStorage)
 
 TEST(AbstractDataType, MaximumRejectsInvalidCalls)
 {
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
     LinkedList_t empty = {};
     int maximum = 0;

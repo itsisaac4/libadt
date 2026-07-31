@@ -81,7 +81,7 @@ TEST(Sorting, SortsDynamicArrayWithConfiguredComparator)
 {
     int values[] = {4, 1, 5, 2, 3};
     int expected[] = {1, 2, 3, 4, 5};
-    ADT_TypeInfo_t type = {sizeof(int), CompareInt, PrintInt, NULL};
+    ADT_ElementTypeInfo_t type = {sizeof(int), CompareInt, PrintInt, ToNumberInt, NULL};
     DynamicArray_t array = {};
 
     CHECK_TRUE(da_InitFrom(&array, values, 5, type));
@@ -95,7 +95,7 @@ TEST(Sorting, SortsLinkedListWithConfiguredComparator)
 {
     int values[] = {4, 1, 5, 2, 3};
     int expected[] = {1, 2, 3, 4, 5};
-    ADT_TypeInfo_t type = {sizeof(int), CompareInt, PrintInt, NULL};
+    ADT_ElementTypeInfo_t type = {sizeof(int), CompareInt, PrintInt, ToNumberInt, NULL};
     LinkedList_t list = {};
 
     CHECK_TRUE(ll_InitFrom(&list, values, 5, type));
@@ -109,7 +109,7 @@ TEST(Sorting, SelectionSortWorksAcrossContainerTypes)
 {
     int values[] = {5, 2, 4, 1, 3, 2};
     int expected[] = {1, 2, 2, 3, 4, 5};
-    ADT_TypeInfo_t type = {sizeof(int), CompareInt, PrintInt, NULL};
+    ADT_ElementTypeInfo_t type = {sizeof(int), CompareInt, PrintInt, ToNumberInt, NULL};
     DynamicArray_t array = {};
     LinkedList_t list = {};
 
@@ -129,7 +129,7 @@ TEST(Sorting, SelectionSortUsesComparatorOverride)
 {
     int values[] = {1, 4, 2, 5, 3};
     int expected[] = {5, 4, 3, 2, 1};
-    ADT_TypeInfo_t type = {sizeof(int), CompareInt, PrintInt, NULL};
+    ADT_ElementTypeInfo_t type = {sizeof(int), CompareInt, PrintInt, ToNumberInt, NULL};
     DynamicArray_t array = {};
 
     CHECK_TRUE(da_InitFrom(&array, values, 5, type));
@@ -143,7 +143,7 @@ TEST(Sorting, InsertionSortWorksAcrossContainerTypes)
 {
     int values[] = {1, 3, 2, 5, 4, 4};
     int expected[] = {1, 2, 3, 4, 4, 5};
-    ADT_TypeInfo_t type = {sizeof(int), CompareInt, PrintInt, NULL};
+    ADT_ElementTypeInfo_t type = {sizeof(int), CompareInt, PrintInt, ToNumberInt, NULL};
     DynamicArray_t array = {};
     LinkedList_t list = {};
 
@@ -163,7 +163,7 @@ TEST(Sorting, QuickSortWorksAcrossContainerTypes)
 {
     int values[] = {9, 8, 7, 6, 5, 4, 3, 2, 1, 1};
     int expected[] = {1, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-    ADT_TypeInfo_t type = {sizeof(int), CompareInt, PrintInt, NULL};
+    ADT_ElementTypeInfo_t type = {sizeof(int), CompareInt, PrintInt, ToNumberInt, NULL};
     DynamicArray_t array = {};
     LinkedList_t list = {};
 
@@ -183,7 +183,7 @@ TEST(Sorting, QuickSortUsesComparatorOverride)
 {
     int values[] = {1, 5, 2, 4, 3};
     int expected[] = {5, 4, 3, 2, 1};
-    ADT_TypeInfo_t type = {sizeof(int), CompareInt, PrintInt, NULL};
+    ADT_ElementTypeInfo_t type = {sizeof(int), CompareInt, PrintInt, ToNumberInt, NULL};
     LinkedList_t list = {};
 
     CHECK_TRUE(ll_InitFrom(&list, values, 5, type));
@@ -196,7 +196,7 @@ TEST(Sorting, QuickSortUsesComparatorOverride)
 TEST(Sorting, QuickSortHandlesDuplicateOnlyInput)
 {
     int values[128] = {};
-    ADT_TypeInfo_t type = {sizeof(int), CompareInt, PrintInt, NULL};
+    ADT_ElementTypeInfo_t type = {sizeof(int), CompareInt, PrintInt, ToNumberInt, NULL};
     DynamicArray_t array = {};
 
     CHECK_TRUE(da_InitFrom(&array, values, 128, type));
@@ -210,7 +210,7 @@ TEST(Sorting, BogoSortWorksAcrossContainerTypes)
 {
     int values[] = {3, 1, 4, 2};
     int expected[] = {1, 2, 3, 4};
-    ADT_TypeInfo_t type = {sizeof(int), CompareInt, PrintInt, NULL};
+    ADT_ElementTypeInfo_t type = {sizeof(int), CompareInt, PrintInt, ToNumberInt, NULL};
     DynamicArray_t array = {};
     LinkedList_t list = {};
 
@@ -229,7 +229,7 @@ TEST(Sorting, BogoSortWorksAcrossContainerTypes)
 TEST(Sorting, BogoSortRejectsOversizedUnsortedInputWithoutChangingIt)
 {
     int values[] = {9, 8, 7, 6, 5, 4, 3, 2, 1};
-    ADT_TypeInfo_t type = {sizeof(int), CompareInt, PrintInt, NULL};
+    ADT_ElementTypeInfo_t type = {sizeof(int), CompareInt, PrintInt, ToNumberInt, NULL};
     DynamicArray_t array = {};
 
     CHECK_TRUE(da_InitFrom(&array, values, 9, type));
@@ -242,7 +242,7 @@ TEST(Sorting, BogoSortRejectsOversizedUnsortedInputWithoutChangingIt)
 TEST(Sorting, BogoSortAcceptsOversizedInputWhenAlreadySorted)
 {
     int values[] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-    ADT_TypeInfo_t type = {sizeof(int), CompareInt, PrintInt, NULL};
+    ADT_ElementTypeInfo_t type = {sizeof(int), CompareInt, PrintInt, ToNumberInt, NULL};
     LinkedList_t list = {};
 
     CHECK_TRUE(ll_InitFrom(&list, values, 9, type));
@@ -256,7 +256,7 @@ TEST(Sorting, ComparatorOverrideControlsOrdering)
 {
     int values[] = {2, 5, 1, 4, 3};
     int expected[] = {5, 4, 3, 2, 1};
-    ADT_TypeInfo_t type = {sizeof(int), CompareInt, PrintInt, NULL};
+    ADT_ElementTypeInfo_t type = {sizeof(int), CompareInt, PrintInt, ToNumberInt, NULL};
     DynamicArray_t array = {};
     LinkedList_t list = {};
 
@@ -276,7 +276,7 @@ TEST(Sorting, ComparatorOverrideWorksWithoutConfiguredComparator)
 {
     int values[] = {3, 1, 2};
     int expected[] = {1, 2, 3};
-    ADT_TypeInfo_t type = {sizeof(int), NULL, PrintInt, NULL};
+    ADT_ElementTypeInfo_t type = {sizeof(int), NULL, PrintInt, ToNumberInt, NULL};
     DynamicArray_t array = {};
 
     CHECK_TRUE(da_InitFrom(&array, values, 3, type));
@@ -289,7 +289,7 @@ TEST(Sorting, ComparatorOverrideWorksWithoutConfiguredComparator)
 
 TEST(Sorting, AcceptsEmptyAndSingleElementContainers)
 {
-    ADT_TypeInfo_t type = {sizeof(int), CompareInt, PrintInt, NULL};
+    ADT_ElementTypeInfo_t type = {sizeof(int), CompareInt, PrintInt, ToNumberInt, NULL};
     DynamicArray_t array = {};
     LinkedList_t list = {};
     int value = 7;
@@ -308,7 +308,7 @@ TEST(Sorting, AcceptsEmptyAndSingleElementContainers)
 TEST(Sorting, RejectsInvalidArgumentsAndAlgorithm)
 {
     int values[] = {2, 1};
-    ADT_TypeInfo_t type = {sizeof(int), CompareInt, PrintInt, NULL};
+    ADT_ElementTypeInfo_t type = {sizeof(int), CompareInt, PrintInt, ToNumberInt, NULL};
     DynamicArray_t array = {};
 
     CHECK_TRUE(da_InitFrom(&array, values, 2, type));
@@ -327,9 +327,10 @@ TEST(Sorting, PreservesResourceOwnershipWhileReordering)
         {3, CopyString("three")},
         {1, CopyString("one")},
         {2, CopyString("two")}};
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(OwnedValue_t),
         CompareOwnedValue,
+        NULL,
         NULL,
         DestroyOwnedValue};
     LinkedList_t list = {};

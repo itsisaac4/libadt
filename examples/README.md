@@ -13,6 +13,7 @@ directory, run `make list`, `make` to build everything, or one target below.
 | `make owned-records` | `linked_list/owned_records.c` | Resource destruction and ownership transfer |
 | `make sorting` | `sorting/algorithms.c` | Bubble, selection, insertion, quick, and bounded bogo sort |
 | `make custom-order` | `sorting/custom_order.c` | Default and per-call comparators for a custom type |
+| `make statistics` | `statistics/summary.c` | Mean, median, and mode through one polymorphic API |
 
 The source and generated executables remain separate:
 
@@ -22,6 +23,7 @@ examples/
 ├── dynamic_array/
 ├── linked_list/
 ├── sorting/
+├── statistics/
 └── build/
 ```
 

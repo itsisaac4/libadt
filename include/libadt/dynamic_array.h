@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include "abstract_data_type.h"
-#include "primitive_dispatch.h"
+#include "internal/primitive_dispatch.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -22,7 +22,7 @@ extern "C"
     typedef struct
     {
         ADT_Super_t super;
-        
+
         struct
         {
             void *data;
@@ -46,11 +46,12 @@ _Static_assert(offsetof(DynamicArray_t, super) == 0, "DynamicArray_t.super must 
 #define DA_INIT(array, type)             \
     da_Init(                             \
         (array),                         \
-        (ADT_TypeInfo_t){                \
-            .elementSize = sizeof(type), \
-            .compare = COMPARATOR(type), \
-            .print = PRINTER(type),      \
-            .destroy = NULL})
+        ADT_ELEMENT_TYPE_INFO(            \
+            type,                        \
+            COMPARATOR(type),            \
+            PRINTER(type),               \
+            TO_NUMBER(type),             \
+            NULL))
 
 /**
  * @brief Initializes an array from a fixed-size C array.
@@ -63,30 +64,31 @@ _Static_assert(offsetof(DynamicArray_t, super) == 0, "DynamicArray_t.super must 
         (array),                                               \
         (values),                                              \
         ARRAY_COUNT(values),                                   \
-        (ADT_TypeInfo_t){                                      \
-            .elementSize = sizeof((values)[0]),                \
-            .compare = COMPARATOR(typeof_unqual((values)[0])), \
-            .print = PRINTER(typeof_unqual((values)[0])),      \
-            .destroy = NULL})
+        ADT_ELEMENT_TYPE_INFO(                                 \
+            typeof_unqual((values)[0]),                        \
+            COMPARATOR(typeof_unqual((values)[0])),            \
+            PRINTER(typeof_unqual((values)[0])),               \
+            TO_NUMBER(typeof_unqual((values)[0])),             \
+            NULL))
 #endif
 
     /**
      * @brief Initializes an empty array.
      * @param[out] array Array to initialize.
-     * @param typeInfo Runtime element type; elementSize must be nonzero.
+     * @param elementType Runtime element information; elementSize must be nonzero.
      * @return true on success; otherwise false.
      */
-    bool da_Init(DynamicArray_t *array, ADT_TypeInfo_t typeInfo);
+    bool da_Init(DynamicArray_t *array, ADT_ElementTypeInfo_t elementType);
 
     /**
      * @brief Initializes an array with shallow copies of contiguous elements.
      * @param[out] array Array to initialize.
      * @param elements Elements to copy, or NULL when initialCount is zero.
      * @param initialCount Number of elements.
-     * @param typeInfo Runtime element type; elementSize must be nonzero.
+     * @param elementType Runtime element information; elementSize must be nonzero.
      * @return true on success; otherwise false.
      */
-    bool da_InitFrom(DynamicArray_t *array, const void *elements, size_t initialCount, ADT_TypeInfo_t typeInfo);
+    bool da_InitFrom(DynamicArray_t *array, const void *elements, size_t initialCount, ADT_ElementTypeInfo_t elementType);
 
     /**
      * @brief Copies an element into caller storage without transferring ownership.
@@ -97,7 +99,7 @@ _Static_assert(offsetof(DynamicArray_t, super) == 0, "DynamicArray_t.super must 
      */
     bool da_Get(const DynamicArray_t *array, size_t index, void *outElement);
 
-#include "detail/dynamic_array_operations.h"
+#include "internal/dynamic_array_operations.h"
 
 #ifndef __cplusplus
 /**
@@ -111,10 +113,10 @@ _Static_assert(offsetof(DynamicArray_t, super) == 0, "DynamicArray_t.super must 
  * @param[out] outIndex Matching index.
  * @return true when found; otherwise false.
  */
-#define da_IndexOf(array, element, outIndex)               \
+#define da_IndexOf(array, element, outIndex)                   \
     ADT_DETAIL_DISPATCH_ELEMENT(da_detail_IndexOf, (element))( \
-        (array),                                           \
-        (element),                                         \
+        (array),                                               \
+        (element),                                             \
         (outIndex))
 
 /**
@@ -127,9 +129,9 @@ _Static_assert(offsetof(DynamicArray_t, super) == 0, "DynamicArray_t.super must 
  * @param element Value or address matching the initialized element type.
  * @return true when found; otherwise false.
  */
-#define da_Contains(array, element)                         \
+#define da_Contains(array, element)                             \
     ADT_DETAIL_DISPATCH_ELEMENT(da_detail_Contains, (element))( \
-        (array),                                            \
+        (array),                                                \
         (element))
 
 /**
@@ -143,10 +145,10 @@ _Static_assert(offsetof(DynamicArray_t, super) == 0, "DynamicArray_t.super must 
  * @param element Value or address matching the initialized element type.
  * @return true on success; otherwise false.
  */
-#define da_Set(array, index, element)                     \
+#define da_Set(array, index, element)                      \
     ADT_DETAIL_DISPATCH_ELEMENT(da_detail_Set, (element))( \
-        (array),                                          \
-        (index),                                          \
+        (array),                                           \
+        (index),                                           \
         (element))
 
 /**
@@ -160,10 +162,10 @@ _Static_assert(offsetof(DynamicArray_t, super) == 0, "DynamicArray_t.super must 
  * @param element Value or address matching the initialized element type.
  * @return true on success; otherwise false.
  */
-#define da_Insert(array, index, element)                     \
+#define da_Insert(array, index, element)                      \
     ADT_DETAIL_DISPATCH_ELEMENT(da_detail_Insert, (element))( \
-        (array),                                             \
-        (index),                                             \
+        (array),                                              \
+        (index),                                              \
         (element))
 
 /**
@@ -176,9 +178,9 @@ _Static_assert(offsetof(DynamicArray_t, super) == 0, "DynamicArray_t.super must 
  * @param element Value or address matching the initialized element type.
  * @return true on success; otherwise false.
  */
-#define da_Prepend(array, element)                         \
+#define da_Prepend(array, element)                             \
     ADT_DETAIL_DISPATCH_ELEMENT(da_detail_Prepend, (element))( \
-        (array),                                            \
+        (array),                                               \
         (element))
 
 /**
@@ -191,9 +193,9 @@ _Static_assert(offsetof(DynamicArray_t, super) == 0, "DynamicArray_t.super must 
  * @param element Value or address matching the initialized element type.
  * @return true on success; otherwise false.
  */
-#define da_Append(array, element)                         \
+#define da_Append(array, element)                             \
     ADT_DETAIL_DISPATCH_ELEMENT(da_detail_Append, (element))( \
-        (array),                                           \
+        (array),                                              \
         (element))
 #endif
 

@@ -71,7 +71,7 @@ container.
 - Resizable contiguous storage with `DynamicArray_t`
 - Doubly linked storage with `LinkedList_t`
 - Shared traversal, printing, extrema, and sorting
-- Runtime element information through `ADT_TypeInfo_t`
+- Runtime element information through `ADT_ElementTypeInfo_t`
 - C23 `_Generic` element operations
 - Custom comparators, printers, and resource destructors
 - Explicit resource transfer through `Take`
@@ -90,6 +90,9 @@ operate on either representation:
 adt_Print(&container);
 adt_Min(&container, &minimum);
 adt_Max(&container, &maximum);
+adt_Mean(&container, &mean);
+adt_Median(&container, &median);
+adt_Mode(&container, &mode);
 adt_Sort(&container, ADT_SORT_QUICK);
 ```
 
@@ -98,11 +101,12 @@ override for alternate orderings of the same element type.
 
 ## Runtime type information
 
-`ADT_TypeInfo_t` defines the size and behavior of one stored element:
+`ADT_ElementTypeInfo_t` defines the size and behavior of one stored element:
 
 - `elementSize` controls allocation and shallow copying.
 - `compare` defines equality and ordering.
 - `print` defines how one element is displayed.
+- `toNumber` projects an element for numeric statistics.
 - `destroy` releases resources owned by an element.
 
 Containers own their element storage. Operations make shallow copies of element
@@ -112,8 +116,10 @@ bytes. A destroy callback releases only resources owned by an element.
 ## Documentation
 
 - [Getting started](docs/getting_started.md)
+- [Custom element types](docs/custom_types.md)
 - [Ownership and shallow copying](docs/ownership.md)
 - [Runtime type information](docs/runtime_type_info.md)
+- [Numeric statistics](docs/statistics.md)
 - [Polymorphism](docs/polymorphism.md)
 - [Dynamic arrays](docs/dynamic_array.md)
 - [Linked lists](docs/linked_list.md)
@@ -124,25 +130,34 @@ bytes. A destroy callback releases only resources owned by an element.
 ```text
 include/libadt/
 ├── abstract_data_type.h
-├── primitive_dispatch.h
 ├── dynamic_array.h
 ├── linked_list.h
-└── detail/
+├── element/
+│   ├── comparators.h
+│   ├── number_converters.h
+│   └── printers.h
+└── internal/
     ├── dynamic_array_operations.h
-    └── linked_list_operations.h
+    ├── linked_list_operations.h
+    └── primitive_dispatch.h
 
 src/
 ├── shared/
 │   ├── abstract_data_type.c
 │   ├── statistics.c
 │   ├── sorting.c
-│   ├── comparators.c
-│   └── printers.c
+│   └── element/
+│       ├── comparators.c
+│       ├── number_converters.c
+│       └── printers.c
 └── containers/
-    ├── dynamic_array.c
-    ├── dynamic_array_primitives.c
-    ├── linked_list.c
-    └── linked_list_primitives.c
+    ├── dynamic_array/
+    │   ├── dynamic_array.c
+    │   └── primitive_operations.c
+    └── linked_list/
+        ├── linked_list.c
+        ├── linked_list_node.h
+        └── primitive_operations.c
 ```
 
 # Final project write-up
@@ -157,7 +172,7 @@ the project.
 
 The library currently implements dynamic arrays and doubly linked lists. Both
 support the same element model and can share operations such as printing,
-minimum, maximum, and sorting.
+extrema, numeric statistics, and sorting.
 
 ## Connections to course concepts
 
@@ -186,9 +201,10 @@ fit their behavior.
 
 ## Generic element operations
 
-The containers store bytes instead of one fixed C type. `ADT_TypeInfo_t`
-provides the element size and optional compare, print, and destroy functions.
-C23 `_Generic` then chooses how a public operation handles its argument:
+The containers store bytes instead of one fixed C type. `ADT_ElementTypeInfo_t`
+provides the element size and optional compare, print, numeric projection, and
+destroy functions. C23 `_Generic` then chooses how a public operation handles
+its argument:
 
 ```c
 da_Append(&numbers, 5);
@@ -227,7 +243,7 @@ encapsulation while keeping stack allocation simple.
 
 The storage code uses `void *`, so an element's original compile-time type is
 not available inside the container. Its size and behavior are restored through
-`ADT_TypeInfo_t`.
+`ADT_ElementTypeInfo_t`.
 
 The library checks primitive sizes, indexes, `NULL` arguments, allocation
 failures, overflow, and unsafe storage aliasing. For a custom type, the caller
@@ -245,7 +261,7 @@ changes explicit instead of hiding them behind automatic memory management.
 
 CppUTest covers container operations, invalid arguments, ownership, overflow
 protection, primitive and custom types, function pointers, shared traversal,
-printing, minimum/maximum operations, and sorting.
+printing, statistics, and sorting.
 
 ```sh
 make test
@@ -259,7 +275,6 @@ documentation rather than one final upload.
 ## Current limitations and future work
 
 - Stack and queue containers are planned.
-- Shared statistics currently provide minimum and maximum.
 - Custom elements are shallow-copied; there is no automatic clone callback.
 - Stack allocation prevents complete enforcement of private container fields.
 - A live container must be destroyed before being initialized again.

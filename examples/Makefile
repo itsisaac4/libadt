@@ -9,12 +9,13 @@ LIBADT_SOURCES ?= \
 	$(PROJECT_ROOT)/src/shared/abstract_data_type.c \
 	$(PROJECT_ROOT)/src/shared/statistics.c \
 	$(PROJECT_ROOT)/src/shared/sorting.c \
-	$(PROJECT_ROOT)/src/shared/comparators.c \
-	$(PROJECT_ROOT)/src/shared/printers.c \
-	$(PROJECT_ROOT)/src/containers/dynamic_array.c \
-	$(PROJECT_ROOT)/src/containers/dynamic_array_primitives.c \
-	$(PROJECT_ROOT)/src/containers/linked_list.c \
-	$(PROJECT_ROOT)/src/containers/linked_list_primitives.c
+	$(PROJECT_ROOT)/src/shared/element/comparators.c \
+	$(PROJECT_ROOT)/src/shared/element/number_converters.c \
+	$(PROJECT_ROOT)/src/shared/element/printers.c \
+	$(PROJECT_ROOT)/src/containers/dynamic_array/dynamic_array.c \
+	$(PROJECT_ROOT)/src/containers/dynamic_array/primitive_operations.c \
+	$(PROJECT_ROOT)/src/containers/linked_list/linked_list.c \
+	$(PROJECT_ROOT)/src/containers/linked_list/primitive_operations.c
 
 COMMON_DIR := common
 COMMON_BUILD_DIR := $(BUILD_DIR)/common
@@ -39,10 +40,16 @@ SORTING_EXAMPLES := algorithms custom_order
 SORTING_BINARIES := \
 	$(addprefix $(SORTING_BUILD_DIR)/,$(SORTING_EXAMPLES))
 
-.PHONY: all clean list polymorphism dynamic-array student-records debug-view \
-	linked-list owned-records sorting custom-order
+STATISTICS_DIR := statistics
+STATISTICS_BUILD_DIR := $(BUILD_DIR)/statistics
+STATISTICS_EXAMPLES := summary
+STATISTICS_BINARIES := \
+	$(addprefix $(STATISTICS_BUILD_DIR)/,$(STATISTICS_EXAMPLES))
 
-all: $(COMMON_BINARIES) $(DYNAMIC_ARRAY_BINARIES) $(LINKED_LIST_BINARIES) $(SORTING_BINARIES)
+.PHONY: all clean list polymorphism dynamic-array student-records debug-view \
+	linked-list owned-records sorting custom-order statistics
+
+all: $(COMMON_BINARIES) $(DYNAMIC_ARRAY_BINARIES) $(LINKED_LIST_BINARIES) $(SORTING_BINARIES) $(STATISTICS_BINARIES)
 
 list:
 	@printf '%s\n' \
@@ -53,7 +60,8 @@ list:
 		'make linked-list    # primitive linked-list operations' \
 		'make owned-records  # resource ownership and transfer' \
 		'make sorting        # every sorting algorithm' \
-		'make custom-order   # per-call comparator overrides'
+		'make custom-order   # per-call comparator overrides' \
+		'make statistics     # polymorphic numeric statistics'
 
 $(COMMON_BUILD_DIR):
 	mkdir -p $@
@@ -87,6 +95,14 @@ $(SORTING_BUILD_DIR)/%: \
 	$(LIBADT_SOURCES) | $(SORTING_BUILD_DIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $^ -o $@
 
+$(STATISTICS_BUILD_DIR):
+	mkdir -p $@
+
+$(STATISTICS_BUILD_DIR)/%: \
+	$(STATISTICS_DIR)/%.c \
+	$(LIBADT_SOURCES) | $(STATISTICS_BUILD_DIR)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $^ -o $@
+
 polymorphism: $(COMMON_BUILD_DIR)/polymorphism
 	./$<
 
@@ -109,6 +125,9 @@ sorting: $(SORTING_BUILD_DIR)/algorithms
 	./$<
 
 custom-order: $(SORTING_BUILD_DIR)/custom_order
+	./$<
+
+statistics: $(STATISTICS_BUILD_DIR)/summary
 	./$<
 
 clean:

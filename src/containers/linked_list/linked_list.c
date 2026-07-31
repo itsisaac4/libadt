@@ -1,5 +1,5 @@
 #include "libadt/linked_list.h"
-#include "libadt/detail/linked_list_node.h"
+#include "linked_list_node.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -82,7 +82,7 @@ static LinkedListNode_t *CreateNode(const LinkedList_t *list, const void *elemen
         return NULL;
     }
 
-    node->_private.data = malloc(list->super._private.type.elementSize);
+    node->_private.data = malloc(list->super._private.elementType.elementSize);
 
     if (node->_private.data == NULL)
     {
@@ -90,7 +90,7 @@ static LinkedListNode_t *CreateNode(const LinkedList_t *list, const void *elemen
         return NULL;
     }
 
-    memcpy(node->_private.data, element, list->super._private.type.elementSize);
+    memcpy(node->_private.data, element, list->super._private.elementType.elementSize);
     node->_private.previous = NULL;
     node->_private.next = NULL;
 
@@ -128,9 +128,9 @@ static void ReleaseNodes(LinkedList_t *list, bool destroyElements)
     {
         LinkedListNode_t *next = current->_private.next;
 
-        if (destroyElements && list->super._private.type.destroy != NULL)
+        if (destroyElements && list->super._private.elementType.destroy != NULL)
         {
-            list->super._private.type.destroy(current->_private.data);
+            list->super._private.elementType.destroy(current->_private.data);
         }
 
         free(current->_private.data);
@@ -152,7 +152,7 @@ static bool PointsIntoStorage(const LinkedList_t *list, const void *pointer)
         const uintptr_t storage = (uintptr_t)node->_private.data;
 
         if (address >= storage &&
-            address - storage < list->super._private.type.elementSize)
+            address - storage < list->super._private.elementType.elementSize)
         {
             return true;
         }
@@ -161,9 +161,9 @@ static bool PointsIntoStorage(const LinkedList_t *list, const void *pointer)
     return false;
 }
 
-bool ll_Init(LinkedList_t *list, ADT_TypeInfo_t typeInfo)
+bool ll_Init(LinkedList_t *list, ADT_ElementTypeInfo_t elementType)
 {
-    if (list == NULL || typeInfo.elementSize == 0)
+    if (list == NULL || elementType.elementSize == 0)
     {
         return false;
     }
@@ -172,32 +172,32 @@ bool ll_Init(LinkedList_t *list, ADT_TypeInfo_t typeInfo)
         ._private = {
             .vtable = &LINKED_LIST_VTABLE,
             .size = 0,
-            .type = typeInfo}};
+            .elementType = elementType}};
     list->_private.head = NULL;
     list->_private.tail = NULL;
 
     return true;
 }
 
-bool ll_InitFrom(LinkedList_t *list, const void *elements, size_t initialCount, ADT_TypeInfo_t typeInfo)
+bool ll_InitFrom(LinkedList_t *list, const void *elements, size_t initialCount, ADT_ElementTypeInfo_t elementType)
 {
     if (list == NULL ||
-        typeInfo.elementSize == 0 ||
+        elementType.elementSize == 0 ||
         (elements == NULL && initialCount > 0) ||
-        initialCount > SIZE_MAX / typeInfo.elementSize)
+        initialCount > SIZE_MAX / elementType.elementSize)
     {
         return false;
     }
 
     LinkedList_t initializedList;
-    if (!ll_Init(&initializedList, typeInfo))
+    if (!ll_Init(&initializedList, elementType))
     {
         return false;
     }
 
     for (size_t i = 0; i < initialCount; i++)
     {
-        const void *element = (const unsigned char *)elements + i * typeInfo.elementSize;
+        const void *element = (const unsigned char *)elements + i * elementType.elementSize;
 
         if (!ll_detail_AppendRef(&initializedList, element))
         {
@@ -223,7 +223,7 @@ bool ll_Get(const LinkedList_t *list, size_t index, void *outElement)
         return false;
     }
 
-    memmove(outElement, node->_private.data, list->super._private.type.elementSize);
+    memmove(outElement, node->_private.data, list->super._private.elementType.elementSize);
     return true;
 }
 
@@ -245,12 +245,12 @@ bool ll_detail_SetRef(LinkedList_t *list, size_t index, const void *element)
         return true;
     }
 
-    if (list->super._private.type.destroy != NULL)
+    if (list->super._private.elementType.destroy != NULL)
     {
-        list->super._private.type.destroy(node->_private.data);
+        list->super._private.elementType.destroy(node->_private.data);
     }
 
-    memmove(node->_private.data, element, list->super._private.type.elementSize);
+    memmove(node->_private.data, element, list->super._private.elementType.elementSize);
     return true;
 }
 
@@ -259,7 +259,7 @@ bool ll_detail_IndexOfRef(const LinkedList_t *list, const void *element, size_t 
     if (list == NULL ||
         element == NULL ||
         outIndex == NULL ||
-        list->super._private.type.elementSize == 0)
+        list->super._private.elementType.elementSize == 0)
     {
         return false;
     }
@@ -270,12 +270,12 @@ bool ll_detail_IndexOfRef(const LinkedList_t *list, const void *element, size_t 
     while (current != NULL)
     {
         const bool matches =
-            list->super._private.type.compare != NULL
-                ? list->super._private.type.compare(current->_private.data, element) == 0
+            list->super._private.elementType.compare != NULL
+                ? list->super._private.elementType.compare(current->_private.data, element) == 0
                 : memcmp(
                       current->_private.data,
                       element,
-                      list->super._private.type.elementSize) == 0;
+                      list->super._private.elementType.elementSize) == 0;
 
         if (matches)
         {
@@ -300,7 +300,7 @@ bool ll_detail_InsertRef(LinkedList_t *list, size_t index, const void *element)
 {
     if (list == NULL ||
         element == NULL ||
-        list->super._private.type.elementSize == 0 ||
+        list->super._private.elementType.elementSize == 0 ||
         index > list->super._private.size ||
         list->super._private.size == SIZE_MAX)
     {
@@ -351,7 +351,7 @@ bool ll_detail_AppendRef(LinkedList_t *list, const void *element)
 {
     if (list == NULL ||
         element == NULL ||
-        list->super._private.type.elementSize == 0 ||
+        list->super._private.elementType.elementSize == 0 ||
         list->super._private.size == SIZE_MAX)
     {
         return false;
@@ -393,9 +393,9 @@ bool ll_Remove(LinkedList_t *list, size_t index)
         return false;
     }
 
-    if (list->super._private.type.destroy != NULL)
+    if (list->super._private.elementType.destroy != NULL)
     {
-        list->super._private.type.destroy(node->_private.data);
+        list->super._private.elementType.destroy(node->_private.data);
     }
 
     UnlinkNode(list, node);
@@ -420,7 +420,7 @@ bool ll_Take(LinkedList_t *list, size_t index, void *outElement)
         return false;
     }
 
-    memmove(outElement, node->_private.data, list->super._private.type.elementSize);
+    memmove(outElement, node->_private.data, list->super._private.elementType.elementSize);
     UnlinkNode(list, node);
     free(node->_private.data);
     free(node);

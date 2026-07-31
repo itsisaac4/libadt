@@ -41,7 +41,7 @@ Use `DA_INIT(&array, type)` for an empty primitive array and
 | Search | `da_IndexOf`, `da_Contains` |
 | Insertion | `da_Insert`, `da_Prepend`, `da_Append` |
 | Removal | `da_Remove`, `da_Take`, `da_Clear`, `da_Destroy` |
-| Shared | `adt_Size`, `adt_IsEmpty`, `adt_Print`, `adt_Min`, `adt_Max`, `adt_Sort` |
+| Shared | `adt_Size`, `adt_IsEmpty`, `adt_Print`, statistics, `adt_Sort` |
 
 Each operation supports any type matching the array's initialized element
 type. Pass supported primitives directly and all other types by address.
@@ -80,12 +80,12 @@ because moving the remaining elements would invalidate or overwrite it.
 ## Custom element types
 
 ```c
-const ADT_TypeInfo_t studentType = {
-    .elementSize = sizeof(Student_t),
-    .compare = CompareStudent,
-    .print = PrintStudent,
-    .destroy = DestroyStudent
-};
+const ADT_ElementTypeInfo_t studentType = ADT_ELEMENT_TYPE_INFO(
+    Student_t,
+    CompareStudent,
+    PrintStudent,
+    NULL,
+    DestroyStudent);
 
 DynamicArray_t students = {0};
 
@@ -101,7 +101,8 @@ if (da_Init(&students, studentType))
 ```
 
 The append copies the structure, not resources referenced by its fields. See
-[ownership](ownership.md) before using a non-`NULL` destroy callback.
+[custom element types](custom_types.md) and [ownership](ownership.md) before
+using a non-`NULL` destroy callback.
 
 ## Complexity
 

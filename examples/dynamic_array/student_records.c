@@ -22,6 +22,12 @@ static void PrintStudent(const void *element)
     printf("{id: %d, name: \"%s\"}", student->id, student->name);
 }
 
+static double StudentIdToNumber(const void *element)
+{
+    const Student_t *student = element;
+    return (double)student->id;
+}
+
 int main(void)
 {
     Student_t initialStudents[] = {
@@ -29,11 +35,12 @@ int main(void)
         {.id = 1002, .name = "Grace"},
         {.id = 1003, .name = "Dennis"}};
 
-    const ADT_TypeInfo_t studentType = {
-        .elementSize = sizeof(Student_t),
-        .compare = CompareStudent,
-        .print = PrintStudent,
-        .destroy = NULL};
+    const ADT_ElementTypeInfo_t studentType = ADT_ELEMENT_TYPE_INFO(
+        Student_t,
+        CompareStudent,
+        PrintStudent,
+        StudentIdToNumber,
+        NULL);
 
     DynamicArray_t students = {0};
 

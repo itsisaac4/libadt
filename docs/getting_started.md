@@ -2,7 +2,7 @@
 
 libadt is a C23 container library built around runtime element information.
 Dynamic arrays and linked lists have concrete storage APIs while printing,
-traversal, extrema, and sorting operate through their shared `ADT_Super_t`
+traversal, statistics, and sorting operate through their shared `ADT_Super_t`
 state.
 
 ## Build the project
@@ -94,6 +94,9 @@ Functions prefixed with `adt_` accept any initialized libadt container:
 adt_Print(&numbers);
 adt_Min(&numbers, &minimum);
 adt_Max(&numbers, &maximum);
+adt_Mean(&numbers, &mean);
+adt_Median(&numbers, &median);
+adt_Mode(&numbers, &mode);
 adt_Sort(&numbers, ADT_SORT_INSERTION);
 ```
 
@@ -107,5 +110,6 @@ callbacks. See [runtime type information](runtime_type_info.md) and
 - [Linked lists](linked_list.md)
 - [Ownership and shallow copying](ownership.md)
 - [Runtime type information](runtime_type_info.md)
+- [Numeric statistics](statistics.md)
 - [Polymorphism](polymorphism.md)
 - [Compilable examples](../examples/README.md)

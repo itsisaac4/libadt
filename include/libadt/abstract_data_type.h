@@ -4,8 +4,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "comparators.h"
-#include "printers.h"
+#include "element/comparators.h"
+#include "element/number_converters.h"
+#include "element/printers.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -26,6 +27,7 @@ extern "C"
      * - `elementSize`: Size of one element in bytes.
      * - `compare`: Optional element comparator.
      * - `print`: Optional element printer.
+     * - `toNumber`: Optional numeric projection.
      * - `destroy`: Optional owned-resource destructor.
      */
     typedef struct
@@ -33,8 +35,28 @@ extern "C"
         size_t elementSize;
         CompareFn_t compare;
         PrintFn_t print;
+        ToNumberFn_t toNumber;
         DestroyFn_t destroy;
-    } ADT_TypeInfo_t;
+    } ADT_ElementTypeInfo_t;
+
+#ifndef __cplusplus
+/**
+ * @brief Creates complete runtime information for an element type.
+ * @param Type Element type.
+ * @param Compare Comparator, or NULL.
+ * @param Print Printer, or NULL.
+ * @param ToNumber Numeric projection, or NULL.
+ * @param Destroy Owned-resource destructor, or NULL.
+ * @return A complete element type descriptor.
+ */
+#define ADT_ELEMENT_TYPE_INFO(Type, Compare, Print, ToNumber, Destroy) \
+    ((ADT_ElementTypeInfo_t){                                          \
+        .elementSize = sizeof(Type),                                   \
+        .compare = (Compare),                                          \
+        .print = (Print),                                              \
+        .toNumber = (ToNumber),                                        \
+        .destroy = (Destroy)})
+#endif
 
     /** @brief Container-specific virtual operations. */
     typedef struct ADT_VTable_t ADT_VTable_t;
@@ -51,7 +73,7 @@ extern "C"
         {
             const ADT_VTable_t *vtable;
             size_t size;
-            ADT_TypeInfo_t type;
+            ADT_ElementTypeInfo_t elementType;
         } _private;
     } ADT_Super_t;
 
@@ -170,12 +192,12 @@ extern "C"
     /**
      * @brief Gets a container's element type information.
      * @param adt Container to inspect, or NULL.
-     * @return The container-owned type information, or NULL.
+     * @return The container-owned element type information, or NULL.
      */
-    static inline const ADT_TypeInfo_t *adt_Type(const ADT_t *adt)
+    static inline const ADT_ElementTypeInfo_t *adt_ElementType(const ADT_t *adt)
     {
         const ADT_Super_t *super = (const ADT_Super_t *)adt;
-        return super == NULL ? NULL : &super->_private.type;
+        return super == NULL ? NULL : &super->_private.elementType;
     }
 
     /**
@@ -211,6 +233,57 @@ extern "C"
      * @return true on success; otherwise false.
      */
     bool adt_MaxBy(const ADT_t *adt, CompareFn_t compare, void *outElement);
+
+    /**
+     * @brief Calculates the arithmetic mean using the configured projection.
+     * @param adt Initialized nonempty container.
+     * @param[out] outMean Calculated mean.
+     * @return true on success; otherwise false.
+     */
+    bool adt_Mean(const ADT_t *adt, double *outMean);
+
+    /**
+     * @brief Calculates the arithmetic mean using a projection override.
+     * @param adt Initialized nonempty container.
+     * @param toNumber Numeric projection for this operation.
+     * @param[out] outMean Calculated mean.
+     * @return true on success; otherwise false.
+     */
+    bool adt_MeanBy(const ADT_t *adt, ToNumberFn_t toNumber, double *outMean);
+
+    /**
+     * @brief Calculates the median using the configured numeric projection.
+     * @param adt Initialized nonempty container.
+     * @param[out] outMedian Calculated median.
+     * @return true on success; otherwise false.
+     */
+    bool adt_Median(const ADT_t *adt, double *outMedian);
+
+    /**
+     * @brief Calculates the median using a numeric projection override.
+     * @param adt Initialized nonempty container.
+     * @param toNumber Numeric projection for this operation.
+     * @param[out] outMedian Calculated median.
+     * @return true on success; otherwise false.
+     */
+    bool adt_MedianBy(const ADT_t *adt, ToNumberFn_t toNumber, double *outMedian);
+
+    /**
+     * @brief Finds the repeated mode using the configured numeric projection.
+     * @param adt Initialized nonempty container.
+     * @param[out] outMode Smallest mode when multiple values tie.
+     * @return true when a repeated mode exists; otherwise false.
+     */
+    bool adt_Mode(const ADT_t *adt, double *outMode);
+
+    /**
+     * @brief Finds the repeated mode using a numeric projection override.
+     * @param adt Initialized nonempty container.
+     * @param toNumber Numeric projection for this operation.
+     * @param[out] outMode Smallest mode when multiple values tie.
+     * @return true when a repeated mode exists; otherwise false.
+     */
+    bool adt_ModeBy(const ADT_t *adt, ToNumberFn_t toNumber, double *outMode);
 
     /**
      * @brief Sorts a container using its configured comparator.

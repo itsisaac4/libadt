@@ -7,10 +7,10 @@
 #define DYNAMIC_ARRAY_INITIAL_CAPACITY 8
 
 #define ELEMENT_AT(array, index) \
-    ((unsigned char *)(array)->_private.data + (index) * (array)->super._private.type.elementSize)
+    ((unsigned char *)(array)->_private.data + (index) * (array)->super._private.elementType.elementSize)
 
 #define CONST_ELEMENT_AT(array, index) \
-    ((const unsigned char *)(array)->_private.data + (index) * (array)->super._private.type.elementSize)
+    ((const unsigned char *)(array)->_private.data + (index) * (array)->super._private.elementType.elementSize)
 
 static void VisitElements(const ADT_Super_t *adt, ADT_ConstVisitFn_t visitor, void *context)
 {
@@ -49,9 +49,9 @@ static const ADT_VTable_t DA_VTABLE = {
 
 static void DestroyElement(DynamicArray_t *array, size_t index)
 {
-    if (array->super._private.type.destroy != NULL)
+    if (array->super._private.elementType.destroy != NULL)
     {
-        array->super._private.type.destroy(ELEMENT_AT(array, index));
+        array->super._private.elementType.destroy(ELEMENT_AT(array, index));
     }
 }
 
@@ -64,7 +64,7 @@ static bool PointsIntoStorage(const DynamicArray_t *array, const void *pointer)
 
     const uintptr_t storage = (uintptr_t)array->_private.data;
     const uintptr_t address = (uintptr_t)pointer;
-    const size_t storageSize = array->_private.capacity * array->super._private.type.elementSize;
+    const size_t storageSize = array->_private.capacity * array->super._private.elementType.elementSize;
 
     return address >= storage && address - storage < storageSize;
 }
@@ -78,7 +78,7 @@ static void CloseGap(DynamicArray_t *array, size_t index)
         memmove(
             ELEMENT_AT(array, index),
             ELEMENT_AT(array, index + 1),
-            elementsToMove * array->super._private.type.elementSize);
+            elementsToMove * array->super._private.elementType.elementSize);
     }
 
     array->super._private.size--;
@@ -86,7 +86,7 @@ static void CloseGap(DynamicArray_t *array, size_t index)
 
 static bool EnsureCapacity(DynamicArray_t *array, size_t requiredCapacity)
 {
-    if (array == NULL || array->super._private.type.elementSize == 0)
+    if (array == NULL || array->super._private.elementType.elementSize == 0)
     {
         return false;
     }
@@ -107,12 +107,12 @@ static bool EnsureCapacity(DynamicArray_t *array, size_t requiredCapacity)
         newCapacity *= 2;
     }
 
-    if (newCapacity > SIZE_MAX / array->super._private.type.elementSize)
+    if (newCapacity > SIZE_MAX / array->super._private.elementType.elementSize)
     {
         return false;
     }
 
-    void *newData = realloc(array->_private.data, newCapacity * array->super._private.type.elementSize);
+    void *newData = realloc(array->_private.data, newCapacity * array->super._private.elementType.elementSize);
 
     if (newData == NULL)
     {
@@ -125,19 +125,19 @@ static bool EnsureCapacity(DynamicArray_t *array, size_t requiredCapacity)
     return true;
 }
 
-bool da_Init(DynamicArray_t *array, ADT_TypeInfo_t typeInfo)
+bool da_Init(DynamicArray_t *array, ADT_ElementTypeInfo_t elementType)
 {
-    if (array == NULL || typeInfo.elementSize == 0)
+    if (array == NULL || elementType.elementSize == 0)
     {
         return false;
     }
 
-    if (DYNAMIC_ARRAY_INITIAL_CAPACITY > SIZE_MAX / typeInfo.elementSize)
+    if (DYNAMIC_ARRAY_INITIAL_CAPACITY > SIZE_MAX / elementType.elementSize)
     {
         return false;
     }
 
-    void *data = malloc(DYNAMIC_ARRAY_INITIAL_CAPACITY * typeInfo.elementSize);
+    void *data = malloc(DYNAMIC_ARRAY_INITIAL_CAPACITY * elementType.elementSize);
 
     if (data == NULL)
     {
@@ -148,23 +148,23 @@ bool da_Init(DynamicArray_t *array, ADT_TypeInfo_t typeInfo)
         ._private = {
             .vtable = &DA_VTABLE,
             .size = 0,
-            .type = typeInfo}};
+            .elementType = elementType}};
     array->_private.data = data;
     array->_private.capacity = DYNAMIC_ARRAY_INITIAL_CAPACITY;
 
     return true;
 }
 
-bool da_InitFrom(DynamicArray_t *array, const void *elements, size_t initialCount, ADT_TypeInfo_t typeInfo)
+bool da_InitFrom(DynamicArray_t *array, const void *elements, size_t initialCount, ADT_ElementTypeInfo_t elementType)
 {
-    if (array == NULL || typeInfo.elementSize == 0)
+    if (array == NULL || elementType.elementSize == 0)
     {
         return false;
     }
 
     if (elements == NULL)
     {
-        return initialCount > 0 ? false : da_Init(array, typeInfo);
+        return initialCount > 0 ? false : da_Init(array, elementType);
     }
 
     size_t capacity = DYNAMIC_ARRAY_INITIAL_CAPACITY;
@@ -178,12 +178,12 @@ bool da_InitFrom(DynamicArray_t *array, const void *elements, size_t initialCoun
         capacity *= 2;
     }
 
-    if (capacity > SIZE_MAX / typeInfo.elementSize)
+    if (capacity > SIZE_MAX / elementType.elementSize)
     {
         return false;
     }
 
-    void *data = malloc(capacity * typeInfo.elementSize);
+    void *data = malloc(capacity * elementType.elementSize);
 
     if (data == NULL)
     {
@@ -192,14 +192,14 @@ bool da_InitFrom(DynamicArray_t *array, const void *elements, size_t initialCoun
 
     if (initialCount > 0)
     {
-        memcpy(data, elements, initialCount * typeInfo.elementSize);
+        memcpy(data, elements, initialCount * elementType.elementSize);
     }
 
     array->super = (ADT_Super_t){
         ._private = {
             .vtable = &DA_VTABLE,
             .size = initialCount,
-            .type = typeInfo}};
+            .elementType = elementType}};
     array->_private.data = data;
     array->_private.capacity = capacity;
 
@@ -213,7 +213,7 @@ bool da_Get(const DynamicArray_t *array, size_t index, void *outElement)
         return false;
     }
 
-    memcpy(outElement, ELEMENT_AT(array, index), array->super._private.type.elementSize);
+    memcpy(outElement, ELEMENT_AT(array, index), array->super._private.elementType.elementSize);
     return true;
 }
 
@@ -231,7 +231,7 @@ bool da_detail_SetRef(DynamicArray_t *array, size_t index, const void *element)
     }
 
     DestroyElement(array, index);
-    memmove(destination, element, array->super._private.type.elementSize);
+    memmove(destination, element, array->super._private.elementType.elementSize);
     return true;
 }
 
@@ -246,9 +246,9 @@ bool da_detail_IndexOfRef(const DynamicArray_t *array, const void *element, size
     {
         const void *currentElement = ELEMENT_AT(array, i);
         const bool matches =
-            array->super._private.type.compare != NULL
-                ? array->super._private.type.compare(currentElement, element) == 0
-                : memcmp(currentElement, element, array->super._private.type.elementSize) == 0;
+            array->super._private.elementType.compare != NULL
+                ? array->super._private.elementType.compare(currentElement, element) == 0
+                : memcmp(currentElement, element, array->super._private.elementType.elementSize) == 0;
 
         if (matches)
         {
@@ -286,13 +286,13 @@ bool da_detail_InsertRef(DynamicArray_t *array, size_t index, const void *elemen
 
     if (PointsIntoStorage(array, element))
     {
-        elementCopy = malloc(array->super._private.type.elementSize);
+        elementCopy = malloc(array->super._private.elementType.elementSize);
         if (elementCopy == NULL)
         {
             return false;
         }
 
-        memcpy(elementCopy, element, array->super._private.type.elementSize);
+        memcpy(elementCopy, element, array->super._private.elementType.elementSize);
         source = elementCopy;
     }
 
@@ -309,10 +309,10 @@ bool da_detail_InsertRef(DynamicArray_t *array, size_t index, const void *elemen
     {
         memmove(dest,
                 ELEMENT_AT(array, index),
-                elementsToMove * array->super._private.type.elementSize);
+                elementsToMove * array->super._private.elementType.elementSize);
     }
 
-    memcpy(ELEMENT_AT(array, index), source, array->super._private.type.elementSize);
+    memcpy(ELEMENT_AT(array, index), source, array->super._private.elementType.elementSize);
     array->super._private.size++;
 
     free(elementCopy);
@@ -361,7 +361,7 @@ bool da_Take(DynamicArray_t *array, size_t index, void *outElement)
         return false;
     }
 
-    memmove(outElement, ELEMENT_AT(array, index), array->super._private.type.elementSize);
+    memmove(outElement, ELEMENT_AT(array, index), array->super._private.elementType.elementSize);
     CloseGap(array, index);
     return true;
 }

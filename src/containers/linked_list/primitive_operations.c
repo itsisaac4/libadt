@@ -1,5 +1,5 @@
 #include "libadt/linked_list.h"
-#include "libadt/primitive_dispatch.h"
+#include "libadt/internal/primitive_dispatch.h"
 
 #define DEFINE_LINKED_LIST_PRIMITIVE(Suffix, Type)                                        \
     bool ll_detail_IndexOf##Suffix(const LinkedList_t *list, Type element, size_t *outIndex) \

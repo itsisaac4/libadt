@@ -1,7 +1,7 @@
-#ifndef LIBADT_DETAIL_LINKED_LIST_NODE_H
-#define LIBADT_DETAIL_LINKED_LIST_NODE_H
+#ifndef LIBADT_INTERNAL_LINKED_LIST_NODE_H
+#define LIBADT_INTERNAL_LINKED_LIST_NODE_H
 
-#include "../linked_list.h"
+#include "libadt/linked_list.h"
 
 struct LinkedListNode
 {

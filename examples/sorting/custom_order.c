@@ -38,17 +38,24 @@ static void PrintStudent(const void *element)
     printf("{%d, %s, %.1f}", student->id, student->name, student->score);
 }
 
+static double StudentScoreToNumber(const void *element)
+{
+    const Student_t *student = element;
+    return student->score;
+}
+
 int main(void)
 {
     Student_t values[] = {
         {.id = 1003, .name = "Dennis", .score = 88.0},
         {.id = 1001, .name = "Ada", .score = 97.5},
         {.id = 1002, .name = "Grace", .score = 94.0}};
-    const ADT_TypeInfo_t studentType = {
-        .elementSize = sizeof(Student_t),
-        .compare = CompareStudentId,
-        .print = PrintStudent,
-        .destroy = NULL};
+    const ADT_ElementTypeInfo_t studentType = ADT_ELEMENT_TYPE_INFO(
+        Student_t,
+        CompareStudentId,
+        PrintStudent,
+        StudentScoreToNumber,
+        NULL);
     DynamicArray_t students = {0};
 
     if (!da_InitFrom(&students, values, ARRAY_COUNT(values), studentType))

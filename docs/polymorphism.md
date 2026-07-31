@@ -37,7 +37,7 @@ address as its `ADT_Super_t`.
 
 Shared functions accept the opaque `ADT_t` parameter type and inspect only the
 common leading state. Shared metadata and representation-specific fields are
-grouped under `_private`; use `adt_Size()` and `adt_Type()` to inspect public
+grouped under `_private`; use `adt_Size()` and `adt_ElementType()` to inspect public
 metadata.
 
 The `_private` name documents an unsafe boundary rather than enforcing one,
@@ -85,6 +85,7 @@ for (size_t i = 0; i < ARRAY_COUNT(containers); i++)
 | `adt_ForEachMutable` | Mutable traversal |
 | `adt_Print` | Read-only traversal and an element printer |
 | `adt_Min`, `adt_Max` | Read-only traversal and an element comparator |
+| `adt_Mean`, `adt_Median`, `adt_Mode` | Read-only traversal and a numeric projection |
 | `adt_Sort` | Read-only and mutable traversal plus a comparator |
 
 Sorting first copies elements into a temporary contiguous buffer, sorts that

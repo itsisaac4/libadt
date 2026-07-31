@@ -1,7 +1,7 @@
-#ifndef LIBADT_PRIMITIVE_DISPATCH_H
-#define LIBADT_PRIMITIVE_DISPATCH_H
+#ifndef LIBADT_INTERNAL_PRIMITIVE_DISPATCH_H
+#define LIBADT_INTERNAL_PRIMITIVE_DISPATCH_H
 
-#include "abstract_data_type.h"
+#include "../abstract_data_type.h"
 
 /**
  * @brief Applies a macro to every supported primitive.
@@ -66,6 +66,21 @@
         float *: PrintFloat,              \
         double *: PrintDouble,            \
         default: ((PrintFn_t)0))
+
+/**
+ * @brief Selects the built-in numeric projection for a C type.
+ * @param Type Element type.
+ * @return Its ToNumberFn_t, or NULL for an unsupported type.
+ */
+#define TO_NUMBER(Type)                      \
+    _Generic(((Type *)0),                    \
+        char *: ToNumberChar,                \
+        int *: ToNumberInt,                  \
+        unsigned int *: ToNumberUnsignedInt, \
+        long *: ToNumberLong,                \
+        float *: ToNumberFloat,              \
+        double *: ToNumberDouble,            \
+        default: ((ToNumberFn_t)0))
 #endif
 
 /**
@@ -76,7 +91,7 @@
  */
 static inline bool adt_AcceptsElementSize(const ADT_t *adt, size_t elementSize)
 {
-    const ADT_TypeInfo_t *type = adt_Type(adt);
+    const ADT_ElementTypeInfo_t *type = adt_ElementType(adt);
     return type != NULL && type->elementSize == elementSize;
 }
 

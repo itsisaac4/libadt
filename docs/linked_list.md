@@ -41,7 +41,7 @@ Use `LL_INIT(&list, type)` for an empty primitive list and
 | Search | `ll_IndexOf`, `ll_Contains` |
 | Insertion | `ll_Insert`, `ll_Prepend`, `ll_Append` |
 | Removal | `ll_Remove`, `ll_Take`, `ll_Clear`, `ll_Destroy` |
-| Shared | `adt_Size`, `adt_IsEmpty`, `adt_Print`, `adt_Min`, `adt_Max`, `adt_Sort` |
+| Shared | `adt_Size`, `adt_IsEmpty`, `adt_Print`, statistics, `adt_Sort` |
 
 Each operation supports any type matching the list's initialized element type.
 Pass supported primitives directly and all other types by address.
@@ -74,12 +74,12 @@ stored by the list.
 ## Custom element types
 
 ```c
-const ADT_TypeInfo_t studentType = {
-    .elementSize = sizeof(Student_t),
-    .compare = CompareStudent,
-    .print = PrintStudent,
-    .destroy = DestroyStudent
-};
+const ADT_ElementTypeInfo_t studentType = ADT_ELEMENT_TYPE_INFO(
+    Student_t,
+    CompareStudent,
+    PrintStudent,
+    NULL,
+    DestroyStudent);
 
 LinkedList_t students = {0};
 
@@ -95,8 +95,8 @@ if (ll_Init(&students, studentType))
 ```
 
 After a successful append, the stored shallow copy is responsible for resources
-described by `DestroyStudent`. See [ownership](ownership.md) for the complete
-contract.
+described by `DestroyStudent`. See [custom element types](custom_types.md) and
+[ownership](ownership.md) for the complete contract.
 
 ## Complexity
 

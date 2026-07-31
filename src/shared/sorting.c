@@ -272,7 +272,7 @@ bool adt_SortBy(ADT_t *adt, ADT_SortAlgorithm_t algorithm, CompareFn_t compare)
         super->_private.vtable == NULL ||
         super->_private.vtable->visit == NULL ||
         super->_private.vtable->visitMutable == NULL ||
-        super->_private.type.elementSize == 0 ||
+        super->_private.elementType.elementSize == 0 ||
         compare == NULL)
     {
         return false;
@@ -304,14 +304,14 @@ bool adt_SortBy(ADT_t *adt, ADT_SortAlgorithm_t algorithm, CompareFn_t compare)
         return true;
     }
 
-    if (super->_private.size > SIZE_MAX / super->_private.type.elementSize)
+    if (super->_private.size > SIZE_MAX / super->_private.elementType.elementSize)
     {
         return false;
     }
 
-    size_t bufferSize = super->_private.size * super->_private.type.elementSize;
+    size_t bufferSize = super->_private.size * super->_private.elementType.elementSize;
     unsigned char *buffer = malloc(bufferSize);
-    void *tmp = malloc(super->_private.type.elementSize);
+    void *tmp = malloc(super->_private.elementType.elementSize);
 
     if (buffer == NULL || tmp == NULL)
     {
@@ -322,7 +322,7 @@ bool adt_SortBy(ADT_t *adt, ADT_SortAlgorithm_t algorithm, CompareFn_t compare)
 
     SortBufferContext_t context = {
         .buffer = buffer,
-        .stride = super->_private.type.elementSize};
+        .stride = super->_private.elementType.elementSize};
 
     if (!adt_ForEach(adt, CopyToBuffer, &context))
     {
@@ -331,7 +331,7 @@ bool adt_SortBy(ADT_t *adt, ADT_SortAlgorithm_t algorithm, CompareFn_t compare)
         return false;
     }
 
-    bool sorted = sortBuffer(buffer, super->_private.size, super->_private.type.elementSize, compare, tmp);
+    bool sorted = sortBuffer(buffer, super->_private.size, super->_private.elementType.elementSize, compare, tmp);
     bool copied = sorted && adt_ForEachMutable(adt, CopyFromBuffer, &context);
 
     free(tmp);
@@ -348,5 +348,5 @@ bool adt_Sort(ADT_t *adt, ADT_SortAlgorithm_t algorithm)
         return false;
     }
 
-    return adt_SortBy(adt, algorithm, super->_private.type.compare);
+    return adt_SortBy(adt, algorithm, super->_private.elementType.compare);
 }

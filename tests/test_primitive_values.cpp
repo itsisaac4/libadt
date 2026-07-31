@@ -10,6 +10,7 @@ extern "C"
 {
     bool C23PrimitiveTypesDispatchByValue(void);
     bool C23PrimitiveOperationsDispatchByValue(void);
+    bool C23ElementTypeInfoConstructorDefinesAllCapabilities(void);
     bool C23CustomOperationsDispatchByAddress(void);
     bool C23FunctionPointersDispatchByAddress(void);
 }
@@ -21,10 +22,11 @@ TEST_GROUP(DynamicArrayPrimitiveValues)
 #define ADT_PRIMITIVE(Suffix, Type)                                  \
     TEST(DynamicArrayPrimitiveValues, Suffix)                         \
     {                                                                \
-        ADT_TypeInfo_t type = {                                      \
+        ADT_ElementTypeInfo_t type = {                               \
             sizeof(Type),                                            \
             Compare##Suffix,                                         \
             Print##Suffix,                                           \
+            ToNumber##Suffix,                                        \
             NULL};                                                   \
         DynamicArray_t array = {};                                   \
         Type output = (Type)0;                                       \
@@ -50,10 +52,11 @@ ADT_FOR_EACH_PRIMITIVE(ADT_PRIMITIVE)
 
 TEST(DynamicArrayPrimitiveValues, RejectsDifferentElementSize)
 {
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(double),
         CompareDouble,
         PrintDouble,
+        ToNumberDouble,
         NULL};
     DynamicArray_t array = {};
     size_t index = 0;
@@ -76,10 +79,11 @@ TEST_GROUP(LinkedListPrimitiveValues)
 #define ADT_PRIMITIVE(Suffix, Type)                                  \
     TEST(LinkedListPrimitiveValues, Suffix)                           \
     {                                                                \
-        ADT_TypeInfo_t type = {                                      \
+        ADT_ElementTypeInfo_t type = {                               \
             sizeof(Type),                                            \
             Compare##Suffix,                                         \
             Print##Suffix,                                           \
+            ToNumber##Suffix,                                        \
             NULL};                                                   \
         LinkedList_t list = {};                                      \
         Type output = (Type)0;                                       \
@@ -105,10 +109,11 @@ ADT_FOR_EACH_PRIMITIVE(ADT_PRIMITIVE)
 
 TEST(LinkedListPrimitiveValues, RejectsDifferentElementSize)
 {
-    ADT_TypeInfo_t type = {
+    ADT_ElementTypeInfo_t type = {
         sizeof(double),
         CompareDouble,
         PrintDouble,
+        ToNumberDouble,
         NULL};
     LinkedList_t list = {};
     size_t index = 0;
@@ -128,6 +133,11 @@ TEST_GROUP(ElementGenerics)
 {
 };
 
+TEST(ElementGenerics, ElementTypeInfoConstructorDefinesEveryCapability)
+{
+    CHECK_TRUE(C23ElementTypeInfoConstructorDefinesAllCapabilities());
+}
+
 TEST(ElementGenerics, DispatchesEverySupportedPrimitive)
 {
     CHECK_TRUE(C23PrimitiveTypesDispatchByValue());
@@ -146,4 +156,25 @@ TEST(ElementGenerics, DispatchesCustomTypesByAddress)
 TEST(ElementGenerics, DispatchesFunctionPointersByAddress)
 {
     CHECK_TRUE(C23FunctionPointersDispatchByAddress());
+}
+
+TEST_GROUP(NumberConverters)
+{
+};
+
+TEST(NumberConverters, ConvertEverySupportedPrimitive)
+{
+    char character = 'A';
+    int signedInteger = -42;
+    unsigned int unsignedInteger = 42U;
+    long longInteger = -420L;
+    float singlePrecision = 4.25F;
+    double doublePrecision = -8.5;
+
+    DOUBLES_EQUAL((double)(unsigned char)'A', ToNumberChar(&character), 0.0);
+    DOUBLES_EQUAL(-42.0, ToNumberInt(&signedInteger), 0.0);
+    DOUBLES_EQUAL(42.0, ToNumberUnsignedInt(&unsignedInteger), 0.0);
+    DOUBLES_EQUAL(-420.0, ToNumberLong(&longInteger), 0.0);
+    DOUBLES_EQUAL(4.25, ToNumberFloat(&singlePrecision), 0.0);
+    DOUBLES_EQUAL(-8.5, ToNumberDouble(&doublePrecision), 0.0);
 }

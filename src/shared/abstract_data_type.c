@@ -57,13 +57,13 @@ bool adt_Print(const ADT_t *adt)
         super->_private.vtable == NULL ||
         super->_private.vtable->containerName == NULL ||
         super->_private.vtable->visit == NULL ||
-        super->_private.type.print == NULL)
+        super->_private.elementType.print == NULL)
     {
         return false;
     }
 
     PrintContext_t context = {
-        .print = super->_private.type.print,
+        .print = super->_private.elementType.print,
         .firstElement = true};
 
     printf("%s (size: %zu): [", super->_private.vtable->containerName, super->_private.size);
@@ -94,10 +94,11 @@ void adt_PrintDebug(const ADT_t *adt, const char *expression, const char *file, 
             ? "<uninitialized>"
             : super->_private.vtable->containerName);
     printf("  size: %zu\n", super->_private.size);
-    printf("  element size: %zu\n", super->_private.type.elementSize);
-    printf("  comparator: %s\n", super->_private.type.compare == NULL ? "NULL" : "set");
-    printf("  printer: %s\n", super->_private.type.print == NULL ? "NULL" : "set");
-    printf("  destructor: %s\n", super->_private.type.destroy == NULL ? "NULL" : "set");
+    printf("  element size: %zu\n", super->_private.elementType.elementSize);
+    printf("  comparator: %s\n", super->_private.elementType.compare == NULL ? "NULL" : "set");
+    printf("  printer: %s\n", super->_private.elementType.print == NULL ? "NULL" : "set");
+    printf("  numeric projection: %s\n", super->_private.elementType.toNumber == NULL ? "NULL" : "set");
+    printf("  destructor: %s\n", super->_private.elementType.destroy == NULL ? "NULL" : "set");
     printf("  elements: ");
 
     if (super->_private.vtable == NULL || super->_private.vtable->visit == NULL)
@@ -106,14 +107,14 @@ void adt_PrintDebug(const ADT_t *adt, const char *expression, const char *file, 
         return;
     }
 
-    if (super->_private.type.print == NULL)
+    if (super->_private.elementType.print == NULL)
     {
         printf("<no print function>\n");
         return;
     }
 
     PrintContext_t context = {
-        .print = super->_private.type.print,
+        .print = super->_private.elementType.print,
         .firstElement = true};
 
     printf("[");

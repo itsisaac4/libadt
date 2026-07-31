@@ -1,7 +1,7 @@
 extern "C"
 {
 #include "libadt/dynamic_array.h"
-#include "libadt/comparators.h"
+#include "libadt/element/comparators.h"
 }
 
 #include "CppUTest/TestHarness.h"
@@ -19,21 +19,21 @@ extern "C"
     bool C23InitFromInfersIntType(void);
 }
 
-static ADT_TypeInfo_t IntTypeInfo()
+static ADT_ElementTypeInfo_t IntTypeInfo()
 {
-    ADT_TypeInfo_t info = {sizeof(int), CompareInt, PrintInt, NULL};
+    ADT_ElementTypeInfo_t info = {sizeof(int), CompareInt, PrintInt, ToNumberInt, NULL};
     return info;
 }
 
-static ADT_TypeInfo_t DoubleTypeInfo()
+static ADT_ElementTypeInfo_t DoubleTypeInfo()
 {
-    ADT_TypeInfo_t info = {sizeof(double), CompareDouble, PrintDouble, NULL};
+    ADT_ElementTypeInfo_t info = {sizeof(double), CompareDouble, PrintDouble, ToNumberDouble, NULL};
     return info;
 }
 
-static ADT_TypeInfo_t InvalidTypeInfo()
+static ADT_ElementTypeInfo_t InvalidTypeInfo()
 {
-    ADT_TypeInfo_t info = {0, NULL, NULL, NULL};
+    ADT_ElementTypeInfo_t info = {0, NULL, NULL, NULL, NULL};
     return info;
 }
 
@@ -50,7 +50,7 @@ TEST_GROUP(DynamicArrayInitialization)
         array._private.data = NULL;
         array.super._private.size = 0;
         array._private.capacity = 0;
-        array.super._private.type = InvalidTypeInfo();
+        array.super._private.elementType = InvalidTypeInfo();
     }
 
     void teardown()
@@ -66,7 +66,7 @@ TEST(DynamicArrayInitialization, InitCreatesEmptyArray)
     CHECK(array._private.data != NULL);
     UNSIGNED_LONGS_EQUAL(0, array.super._private.size);
     UNSIGNED_LONGS_EQUAL(INITIAL_CAPACITY, array._private.capacity);
-    UNSIGNED_LONGS_EQUAL(sizeof(int), array.super._private.type.elementSize);
+    UNSIGNED_LONGS_EQUAL(sizeof(int), array.super._private.elementType.elementSize);
 }
 
 TEST(DynamicArrayInitialization, InitFromCopiesIntegerElements)
@@ -79,7 +79,7 @@ TEST(DynamicArrayInitialization, InitFromCopiesIntegerElements)
 
     UNSIGNED_LONGS_EQUAL(4, array.super._private.size);
     CHECK(array._private.capacity >= array.super._private.size);
-    UNSIGNED_LONGS_EQUAL(sizeof(int), array.super._private.type.elementSize);
+    UNSIGNED_LONGS_EQUAL(sizeof(int), array.super._private.elementType.elementSize);
 
     LONGS_EQUAL(10, stored[0]);
     LONGS_EQUAL(20, stored[1]);
@@ -149,7 +149,7 @@ TEST(DynamicArrayInitialization, InitFromAllowsZeroElements)
 
     UNSIGNED_LONGS_EQUAL(0, array.super._private.size);
     CHECK(array._private.capacity >= INITIAL_CAPACITY);
-    UNSIGNED_LONGS_EQUAL(sizeof(int), array.super._private.type.elementSize);
+    UNSIGNED_LONGS_EQUAL(sizeof(int), array.super._private.elementType.elementSize);
 }
 
 TEST(DynamicArrayInitialization, InitRejectsNullArray)
@@ -164,18 +164,19 @@ TEST(DynamicArrayInitialization, InitRejectsZeroElementSize)
     POINTERS_EQUAL(NULL, array._private.data);
     UNSIGNED_LONGS_EQUAL(0, array.super._private.size);
     UNSIGNED_LONGS_EQUAL(0, array._private.capacity);
-    UNSIGNED_LONGS_EQUAL(0, array.super._private.type.elementSize);
+    UNSIGNED_LONGS_EQUAL(0, array.super._private.elementType.elementSize);
 }
 
 TEST(DynamicArrayInitialization, InitRejectsElementSizeOverflow)
 {
-    ADT_TypeInfo_t typeInfo = {
+    ADT_ElementTypeInfo_t elementType = {
         static_cast<size_t>(-1),
+        NULL,
         NULL,
         NULL,
         NULL};
 
-    CHECK_FALSE(da_Init(&array, typeInfo));
+    CHECK_FALSE(da_Init(&array, elementType));
     POINTERS_EQUAL(NULL, array._private.data);
 }
 
@@ -215,7 +216,7 @@ TEST(DynamicArrayInitialization, InitFromSupportsDoubleElements)
     double *stored = static_cast<double *>(array._private.data);
 
     UNSIGNED_LONGS_EQUAL(3, array.super._private.size);
-    UNSIGNED_LONGS_EQUAL(sizeof(double), array.super._private.type.elementSize);
+    UNSIGNED_LONGS_EQUAL(sizeof(double), array.super._private.elementType.elementSize);
 
     DOUBLES_EQUAL(1.5, stored[0], 0.000001);
     DOUBLES_EQUAL(2.5, stored[1], 0.000001);
@@ -231,7 +232,7 @@ TEST(DynamicArrayInitialization, DestroyResetsArray)
     POINTERS_EQUAL(NULL, array._private.data);
     UNSIGNED_LONGS_EQUAL(0, array.super._private.size);
     UNSIGNED_LONGS_EQUAL(0, array._private.capacity);
-    UNSIGNED_LONGS_EQUAL(0, array.super._private.type.elementSize);
+    UNSIGNED_LONGS_EQUAL(0, array.super._private.elementType.elementSize);
 }
 
 TEST(DynamicArrayInitialization, DestroyHandlesNullPointer)
@@ -249,7 +250,7 @@ TEST(DynamicArrayInitialization, DestroyCanBeCalledTwice)
     POINTERS_EQUAL(NULL, array._private.data);
     UNSIGNED_LONGS_EQUAL(0, array.super._private.size);
     UNSIGNED_LONGS_EQUAL(0, array._private.capacity);
-    UNSIGNED_LONGS_EQUAL(0, array.super._private.type.elementSize);
+    UNSIGNED_LONGS_EQUAL(0, array.super._private.elementType.elementSize);
 }
 
 /* =========================================================
@@ -265,7 +266,7 @@ TEST_GROUP(DynamicArrayInsertion)
         array._private.data = NULL;
         array.super._private.size = 0;
         array._private.capacity = 0;
-        array.super._private.type = InvalidTypeInfo();
+        array.super._private.elementType = InvalidTypeInfo();
 
         CHECK_TRUE(da_Init(&array, IntTypeInfo()));
     }
@@ -406,13 +407,13 @@ TEST(DynamicArrayInsertion, InsertBeyondSizeFails)
 TEST(DynamicArrayInsertion, AppendRejectsSizeOverflow)
 {
     unsigned char storage = 0;
-    ADT_TypeInfo_t typeInfo = {1, NULL, NULL, NULL};
+    ADT_ElementTypeInfo_t elementType = {1, NULL, NULL, NULL, NULL};
     DynamicArray_t fullArray = {
         .super = {
             ._private = {
                 .vtable = nullptr,
                 .size = static_cast<size_t>(-1),
-                .type = typeInfo}},
+                .elementType = elementType}},
         ._private = {
             .data = &storage,
             .capacity = static_cast<size_t>(-1)}};
@@ -616,7 +617,7 @@ TEST_GROUP(DynamicArrayDoubleInsertion)
         array._private.data = NULL;
         array.super._private.size = 0;
         array._private.capacity = 0;
-        array.super._private.type = InvalidTypeInfo();
+        array.super._private.elementType = InvalidTypeInfo();
 
         CHECK_TRUE(da_Init(&array, DoubleTypeInfo()));
     }
@@ -690,7 +691,7 @@ TEST_GROUP(DynamicArrayRemoval)
         array._private.data = NULL;
         array.super._private.size = 0;
         array._private.capacity = 0;
-        array.super._private.type = InvalidTypeInfo();
+        array.super._private.elementType = InvalidTypeInfo();
 
         CHECK_TRUE(da_Init(&array, IntTypeInfo()));
     }
@@ -831,7 +832,7 @@ TEST(DynamicArrayRemoval, ClearRemovesAllElements)
     UNSIGNED_LONGS_EQUAL(0, array.super._private.size);
     UNSIGNED_LONGS_EQUAL(oldCapacity, array._private.capacity);
     POINTERS_EQUAL(oldData, array._private.data);
-    UNSIGNED_LONGS_EQUAL(sizeof(int), array.super._private.type.elementSize);
+    UNSIGNED_LONGS_EQUAL(sizeof(int), array.super._private.elementType.elementSize);
 
     CHECK_TRUE(
         adt_IsEmpty(&array));
@@ -847,7 +848,7 @@ TEST(DynamicArrayRemoval, ClearEmptyArrayIsSafe)
     UNSIGNED_LONGS_EQUAL(0, array.super._private.size);
     UNSIGNED_LONGS_EQUAL(oldCapacity, array._private.capacity);
     POINTERS_EQUAL(oldData, array._private.data);
-    UNSIGNED_LONGS_EQUAL(sizeof(int), array.super._private.type.elementSize);
+    UNSIGNED_LONGS_EQUAL(sizeof(int), array.super._private.elementType.elementSize);
 }
 
 TEST(DynamicArrayRemoval, ClearHandlesNullArray)
@@ -979,7 +980,7 @@ TEST_GROUP(DynamicArrayTypeInfo)
         array._private.data = NULL;
         array.super._private.size = 0;
         array._private.capacity = 0;
-        array.super._private.type = InvalidTypeInfo();
+        array.super._private.elementType = InvalidTypeInfo();
 
         printCallCount = 0;
         printedTotal = 0;
@@ -994,8 +995,9 @@ TEST_GROUP(DynamicArrayTypeInfo)
 
 TEST(DynamicArrayTypeInfo, DestroyCallsConfiguredDestructorForEveryElement)
 {
-    ADT_TypeInfo_t info = {
+    ADT_ElementTypeInfo_t info = {
         sizeof(int *),
+        NULL,
         NULL,
         NULL,
         CountDestroy};
@@ -1014,13 +1016,14 @@ TEST(DynamicArrayTypeInfo, DestroyCallsConfiguredDestructorForEveryElement)
 
     LONGS_EQUAL(3, destroyCallCount);
     POINTERS_EQUAL(NULL, array._private.data);
-    UNSIGNED_LONGS_EQUAL(0, array.super._private.type.elementSize);
+    UNSIGNED_LONGS_EQUAL(0, array.super._private.elementType.elementSize);
 }
 
 TEST(DynamicArrayTypeInfo, SetDestroysReplacedElement)
 {
-    ADT_TypeInfo_t info = {
+    ADT_ElementTypeInfo_t info = {
         sizeof(int *),
+        NULL,
         NULL,
         NULL,
         CountDestroy};
@@ -1047,8 +1050,9 @@ TEST(DynamicArrayTypeInfo, SetDestroysReplacedElement)
 
 TEST(DynamicArrayTypeInfo, SetFromSameElementDoesNotDestroyIt)
 {
-    ADT_TypeInfo_t info = {
+    ADT_ElementTypeInfo_t info = {
         sizeof(int *),
+        NULL,
         NULL,
         NULL,
         CountDestroy};
@@ -1070,8 +1074,9 @@ TEST(DynamicArrayTypeInfo, SetFromSameElementDoesNotDestroyIt)
 
 TEST(DynamicArrayTypeInfo, RemoveDestroysRemovedElementOnly)
 {
-    ADT_TypeInfo_t info = {
+    ADT_ElementTypeInfo_t info = {
         sizeof(int *),
+        NULL,
         NULL,
         NULL,
         CountDestroy};
@@ -1100,8 +1105,9 @@ TEST(DynamicArrayTypeInfo, RemoveDestroysRemovedElementOnly)
 
 TEST(DynamicArrayTypeInfo, TakeTransfersOwnershipWithoutDestroying)
 {
-    ADT_TypeInfo_t info = {
+    ADT_ElementTypeInfo_t info = {
         sizeof(int *),
+        NULL,
         NULL,
         NULL,
         CountDestroy};
@@ -1125,8 +1131,9 @@ TEST(DynamicArrayTypeInfo, TakeTransfersOwnershipWithoutDestroying)
 
 TEST(DynamicArrayTypeInfo, ClearDestroysElementsAndRetainsStorage)
 {
-    ADT_TypeInfo_t info = {
+    ADT_ElementTypeInfo_t info = {
         sizeof(int *),
+        NULL,
         NULL,
         NULL,
         CountDestroy};
@@ -1346,10 +1353,11 @@ TEST(DynamicArrayAccess, IndexOfFallsBackToByteComparisonWithoutComparator)
 {
     da_Destroy(&array);
 
-    ADT_TypeInfo_t info = {
+    ADT_ElementTypeInfo_t info = {
         sizeof(int),
         NULL,
         PrintInt,
+        ToNumberInt,
         NULL};
 
     CHECK_TRUE(da_Init(&array, info));
@@ -1442,10 +1450,11 @@ TEST_GROUP(DynamicArrayPrinting)
 
 TEST(DynamicArrayPrinting, PrintUsesConfiguredPrintFunctionForEveryElement)
 {
-    ADT_TypeInfo_t info = {
+    ADT_ElementTypeInfo_t info = {
         sizeof(int),
         CompareInt,
         CountIntPrint,
+        ToNumberInt,
         NULL};
 
     CHECK_TRUE(da_Init(&array, info));
@@ -1485,7 +1494,7 @@ TEST(DynamicArrayPrinting, PrintHandlesNullArray)
 
 TEST(DynamicArrayPrinting, PrintHandlesMissingPrinter)
 {
-    ADT_TypeInfo_t info = {sizeof(int), CompareInt, NULL, NULL};
+    ADT_ElementTypeInfo_t info = {sizeof(int), CompareInt, NULL, ToNumberInt, NULL};
     CHECK_TRUE(da_Init(&array, info));
 
     std::string output = CaptureStdout(PrintArrayAction, &array);
@@ -1528,7 +1537,7 @@ TEST(DynamicArrayPrinting, SharedDebugPrintHandlesNullContainer)
 TEST(DynamicArrayPrinting, SharedDebugPrintReportsUninitializedContainer)
 {
     array = DynamicArray_t{};
-    array.super._private.type = IntTypeInfo();
+    array.super._private.elementType = IntTypeInfo();
 
     DebugPrintContext context = {&array, "array", "test.c", 9};
     std::string output = CaptureStdout(DebugPrintAction, &context);
@@ -1539,7 +1548,7 @@ TEST(DynamicArrayPrinting, SharedDebugPrintReportsUninitializedContainer)
 
 TEST(DynamicArrayPrinting, SharedDebugPrintReportsMissingPrinter)
 {
-    ADT_TypeInfo_t info = {sizeof(int), CompareInt, NULL, NULL};
+    ADT_ElementTypeInfo_t info = {sizeof(int), CompareInt, NULL, ToNumberInt, NULL};
     CHECK_TRUE(da_Init(&array, info));
 
     DebugPrintContext context = {&array, "array", "test.c", 11};
@@ -1551,7 +1560,7 @@ TEST(DynamicArrayPrinting, SharedDebugPrintReportsMissingPrinter)
 
 TEST(DynamicArrayPrinting, SharedDebugPrintUsesConfiguredPrinterForEveryElement)
 {
-    ADT_TypeInfo_t info = {sizeof(int), CompareInt, CountIntPrint, NULL};
+    ADT_ElementTypeInfo_t info = {sizeof(int), CompareInt, CountIntPrint, ToNumberInt, NULL};
     CHECK_TRUE(da_Init(&array, info));
 
     int values[] = {2, 3, 5};

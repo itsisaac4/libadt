@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include "abstract_data_type.h"
-#include "primitive_dispatch.h"
+#include "internal/primitive_dispatch.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -49,11 +49,12 @@ _Static_assert(offsetof(LinkedList_t, super) == 0, "LinkedList_t.super must be f
 #define LL_INIT(list, type)              \
     ll_Init(                             \
         (list),                          \
-        (ADT_TypeInfo_t){                \
-            .elementSize = sizeof(type), \
-            .compare = COMPARATOR(type), \
-            .print = PRINTER(type),      \
-            .destroy = NULL})
+        ADT_ELEMENT_TYPE_INFO(            \
+            type,                        \
+            COMPARATOR(type),            \
+            PRINTER(type),               \
+            TO_NUMBER(type),             \
+            NULL))
 
 /**
  * @brief Initializes a list from a fixed-size C array.
@@ -66,30 +67,31 @@ _Static_assert(offsetof(LinkedList_t, super) == 0, "LinkedList_t.super must be f
         (list),                                                \
         (values),                                              \
         ARRAY_COUNT(values),                                   \
-        (ADT_TypeInfo_t){                                      \
-            .elementSize = sizeof((values)[0]),                \
-            .compare = COMPARATOR(typeof_unqual((values)[0])), \
-            .print = PRINTER(typeof_unqual((values)[0])),      \
-            .destroy = NULL})
+        ADT_ELEMENT_TYPE_INFO(                                 \
+            typeof_unqual((values)[0]),                        \
+            COMPARATOR(typeof_unqual((values)[0])),            \
+            PRINTER(typeof_unqual((values)[0])),               \
+            TO_NUMBER(typeof_unqual((values)[0])),             \
+            NULL))
 #endif
 
     /**
      * @brief Initializes an empty list.
      * @param[out] list List to initialize.
-     * @param typeInfo Runtime element type; elementSize must be nonzero.
+     * @param elementType Runtime element information; elementSize must be nonzero.
      * @return true on success; otherwise false.
      */
-    bool ll_Init(LinkedList_t *list, ADT_TypeInfo_t typeInfo);
+    bool ll_Init(LinkedList_t *list, ADT_ElementTypeInfo_t elementType);
 
     /**
      * @brief Initializes a list with shallow copies of contiguous elements.
      * @param[out] list List to initialize.
      * @param elements Elements to copy, or NULL when initialCount is zero.
      * @param initialCount Number of elements.
-     * @param typeInfo Runtime element type; elementSize must be nonzero.
+     * @param elementType Runtime element information; elementSize must be nonzero.
      * @return true on success; otherwise false.
      */
-    bool ll_InitFrom(LinkedList_t *list, const void *elements, size_t initialCount, ADT_TypeInfo_t typeInfo);
+    bool ll_InitFrom(LinkedList_t *list, const void *elements, size_t initialCount, ADT_ElementTypeInfo_t elementType);
 
     /**
      * @brief Copies an element into caller storage without transferring ownership.
@@ -100,7 +102,7 @@ _Static_assert(offsetof(LinkedList_t, super) == 0, "LinkedList_t.super must be f
      */
     bool ll_Get(const LinkedList_t *list, size_t index, void *outElement);
 
-#include "detail/linked_list_operations.h"
+#include "internal/linked_list_operations.h"
 
 #ifndef __cplusplus
 /**

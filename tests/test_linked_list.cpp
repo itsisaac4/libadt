@@ -1,7 +1,7 @@
 extern "C"
 {
 #include "libadt/linked_list.h"
-#include "libadt/detail/linked_list_node.h"
+#include "../src/containers/linked_list/linked_list_node.h"
 }
 
 #include "CppUTest/TestHarness.h"
@@ -16,30 +16,32 @@ extern "C"
     bool C23LinkedListInitFromInfersIntType(void);
 }
 
-static ADT_TypeInfo_t LinkedListIntTypeInfo()
+static ADT_ElementTypeInfo_t LinkedListIntTypeInfo()
 {
-    ADT_TypeInfo_t typeInfo = {
+    ADT_ElementTypeInfo_t elementType = {
         sizeof(int),
         CompareInt,
         PrintInt,
+        ToNumberInt,
         NULL};
-    return typeInfo;
+    return elementType;
 }
 
-static ADT_TypeInfo_t LinkedListDoubleTypeInfo()
+static ADT_ElementTypeInfo_t LinkedListDoubleTypeInfo()
 {
-    ADT_TypeInfo_t typeInfo = {
+    ADT_ElementTypeInfo_t elementType = {
         sizeof(double),
         CompareDouble,
         PrintDouble,
+        ToNumberDouble,
         NULL};
-    return typeInfo;
+    return elementType;
 }
 
-static ADT_TypeInfo_t InvalidLinkedListTypeInfo()
+static ADT_ElementTypeInfo_t InvalidLinkedListTypeInfo()
 {
-    ADT_TypeInfo_t typeInfo = {0, NULL, NULL, NULL};
-    return typeInfo;
+    ADT_ElementTypeInfo_t elementType = {0, NULL, NULL, NULL, NULL};
+    return elementType;
 }
 
 static void CheckIntList(const LinkedList_t *list, const int *expected, size_t expectedCount)
@@ -111,9 +113,9 @@ TEST(LinkedListInitialization, InitCreatesEmptyList)
     CHECK_TRUE(ll_Init(&list, LinkedListIntTypeInfo()));
 
     CheckIntList(&list, NULL, 0);
-    UNSIGNED_LONGS_EQUAL(sizeof(int), list.super._private.type.elementSize);
-    FUNCTIONPOINTERS_EQUAL(CompareInt, list.super._private.type.compare);
-    FUNCTIONPOINTERS_EQUAL(PrintInt, list.super._private.type.print);
+    UNSIGNED_LONGS_EQUAL(sizeof(int), list.super._private.elementType.elementSize);
+    FUNCTIONPOINTERS_EQUAL(CompareInt, list.super._private.elementType.compare);
+    FUNCTIONPOINTERS_EQUAL(PrintInt, list.super._private.elementType.print);
 }
 
 TEST(LinkedListInitialization, InitMacroInfersBuiltInTypeCallbacks)
@@ -234,10 +236,10 @@ TEST(LinkedListInitialization, DestroyResetsList)
     ll_Destroy(&list);
 
     CheckIntList(&list, NULL, 0);
-    UNSIGNED_LONGS_EQUAL(0, list.super._private.type.elementSize);
-    POINTERS_EQUAL(NULL, list.super._private.type.compare);
-    POINTERS_EQUAL(NULL, list.super._private.type.print);
-    POINTERS_EQUAL(NULL, list.super._private.type.destroy);
+    UNSIGNED_LONGS_EQUAL(0, list.super._private.elementType.elementSize);
+    POINTERS_EQUAL(NULL, list.super._private.elementType.compare);
+    POINTERS_EQUAL(NULL, list.super._private.elementType.print);
+    POINTERS_EQUAL(NULL, list.super._private.elementType.destroy);
 }
 
 TEST(LinkedListInitialization, DestroyHandlesNullAndRepeatedCalls)
@@ -506,7 +508,7 @@ TEST(LinkedListRemoval, ClearRemovesAllElementsAndAllowsReuse)
 {
     ll_Clear(&list);
     CheckIntList(&list, NULL, 0);
-    UNSIGNED_LONGS_EQUAL(sizeof(int), list.super._private.type.elementSize);
+    UNSIGNED_LONGS_EQUAL(sizeof(int), list.super._private.elementType.elementSize);
 
     int value = 99;
     CHECK_TRUE(ll_detail_AppendRef(&list, &value));
@@ -651,14 +653,15 @@ TEST(LinkedListAccess, IndexOfFallsBackToByteComparison)
 {
     ll_Destroy(&list);
 
-    ADT_TypeInfo_t typeInfo = {
+    ADT_ElementTypeInfo_t elementType = {
         sizeof(int),
         NULL,
         PrintInt,
+        ToNumberInt,
         NULL};
     int values[] = {7, 8, 9};
 
-    CHECK_TRUE(ll_InitFrom(&list, values, 3, typeInfo));
+    CHECK_TRUE(ll_InitFrom(&list, values, 3, elementType));
 
     int target = 8;
     size_t index = 0;
@@ -727,12 +730,13 @@ TEST_GROUP(LinkedListTypeInfo)
 
     void initializeOwnedList()
     {
-        ADT_TypeInfo_t typeInfo = {
+        ADT_ElementTypeInfo_t elementType = {
             sizeof(int *),
             NULL,
             NULL,
+            NULL,
             CountLinkedListDestroy};
-        CHECK_TRUE(ll_Init(&list, typeInfo));
+        CHECK_TRUE(ll_Init(&list, elementType));
     }
 };
 
@@ -906,14 +910,15 @@ TEST(LinkedListPrinting, PrintUsesUnifiedContainerFormat)
 
 TEST(LinkedListPrinting, PrintUsesConfiguredPrinterForEveryElement)
 {
-    ADT_TypeInfo_t typeInfo = {
+    ADT_ElementTypeInfo_t elementType = {
         sizeof(int),
         CompareInt,
         CountLinkedListPrint,
+        ToNumberInt,
         NULL};
     int values[] = {10, 20, 30};
 
-    CHECK_TRUE(ll_InitFrom(&list, values, 3, typeInfo));
+    CHECK_TRUE(ll_InitFrom(&list, values, 3, elementType));
     CaptureLinkedListStdout(PrintLinkedListAction, &list);
 
     LONGS_EQUAL(3, linkedListPrintCallCount);
@@ -940,12 +945,13 @@ TEST(LinkedListPrinting, PrintHandlesNullList)
 
 TEST(LinkedListPrinting, PrintHandlesMissingPrinter)
 {
-    ADT_TypeInfo_t typeInfo = {
+    ADT_ElementTypeInfo_t elementType = {
         sizeof(int),
         CompareInt,
         NULL,
+        ToNumberInt,
         NULL};
-    CHECK_TRUE(ll_Init(&list, typeInfo));
+    CHECK_TRUE(ll_Init(&list, elementType));
 
     std::string output =
         CaptureLinkedListStdout(PrintLinkedListAction, &list);

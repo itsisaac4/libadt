@@ -15,6 +15,11 @@ static int Increment(int value)
     return value + 1;
 }
 
+static double MacroStructToNumber(const void *element)
+{
+    return (double)((const MacroStruct *)element)->value;
+}
+
 bool C23UnknownTypeUsesSafeDefaults(void)
 {
     DynamicArray_t array = {0};
@@ -25,8 +30,9 @@ bool C23UnknownTypeUsesSafeDefaults(void)
     }
 
     const bool usesSafeDefaults =
-        array.super._private.type.compare == NULL &&
-        array.super._private.type.print == NULL;
+        array.super._private.elementType.compare == NULL &&
+        array.super._private.elementType.print == NULL &&
+        array.super._private.elementType.toNumber == NULL;
 
     MacroStruct value = {.value = 42};
     MacroStruct target = {.value = 42};
@@ -49,9 +55,10 @@ bool C23InitFromInfersIntType(void)
     }
 
     const bool inferredInt =
-        array.super._private.type.elementSize == sizeof(int) &&
-        array.super._private.type.compare == CompareInt &&
-        array.super._private.type.print == PrintInt &&
+        array.super._private.elementType.elementSize == sizeof(int) &&
+        array.super._private.elementType.compare == CompareInt &&
+        array.super._private.elementType.print == PrintInt &&
+        array.super._private.elementType.toNumber == ToNumberInt &&
         array.super._private.size == ARRAY_COUNT(values);
 
     da_Destroy(&array);
@@ -68,9 +75,10 @@ bool C23LinkedListInitInfersIntType(void)
     }
 
     const bool inferredInt =
-        list.super._private.type.elementSize == sizeof(int) &&
-        list.super._private.type.compare == CompareInt &&
-        list.super._private.type.print == PrintInt &&
+        list.super._private.elementType.elementSize == sizeof(int) &&
+        list.super._private.elementType.compare == CompareInt &&
+        list.super._private.elementType.print == PrintInt &&
+        list.super._private.elementType.toNumber == ToNumberInt &&
         list.super._private.size == 0;
 
     ll_Destroy(&list);
@@ -88,9 +96,10 @@ bool C23LinkedListInitFromInfersIntType(void)
     }
 
     const bool inferredInt =
-        list.super._private.type.elementSize == sizeof(int) &&
-        list.super._private.type.compare == CompareInt &&
-        list.super._private.type.print == PrintInt &&
+        list.super._private.elementType.elementSize == sizeof(int) &&
+        list.super._private.elementType.compare == CompareInt &&
+        list.super._private.elementType.print == PrintInt &&
+        list.super._private.elementType.toNumber == ToNumberInt &&
         list.super._private.size == ARRAY_COUNT(values);
 
     ll_Destroy(&list);
@@ -100,10 +109,11 @@ bool C23LinkedListInitFromInfersIntType(void)
 #define DEFINE_PRIMITIVE_DISPATCH_CHECK(Suffix, Type)                  \
     static bool CheckDynamicArray##Suffix(void)                         \
     {                                                                  \
-        const ADT_TypeInfo_t type = {                                  \
+        const ADT_ElementTypeInfo_t type = {                           \
             .elementSize = sizeof(Type),                               \
             .compare = Compare##Suffix,                                \
             .print = Print##Suffix,                                    \
+            .toNumber = ToNumber##Suffix,                              \
             .destroy = NULL};                                          \
         DynamicArray_t array = {0};                                    \
         Type value = (Type)7;                                          \
@@ -122,10 +132,11 @@ bool C23LinkedListInitFromInfersIntType(void)
                                                                        \
     static bool CheckLinkedList##Suffix(void)                          \
     {                                                                  \
-        const ADT_TypeInfo_t type = {                                  \
+        const ADT_ElementTypeInfo_t type = {                           \
             .elementSize = sizeof(Type),                               \
             .compare = Compare##Suffix,                                \
             .print = Print##Suffix,                                    \
+            .toNumber = ToNumber##Suffix,                              \
             .destroy = NULL};                                          \
         LinkedList_t list = {0};                                       \
         Type value = (Type)7;                                          \
@@ -169,10 +180,11 @@ bool C23PrimitiveTypesDispatchByValue(void)
 
 bool C23PrimitiveOperationsDispatchByValue(void)
 {
-    const ADT_TypeInfo_t type = {
+    const ADT_ElementTypeInfo_t type = {
         .elementSize = sizeof(int),
         .compare = CompareInt,
         .print = PrintInt,
+        .toNumber = ToNumberInt,
         .destroy = NULL};
     DynamicArray_t array = {0};
     LinkedList_t list = {0};
@@ -209,9 +221,27 @@ bool C23PrimitiveOperationsDispatchByValue(void)
     return arrayWorks && listWorks;
 }
 
+bool C23ElementTypeInfoConstructorDefinesAllCapabilities(void)
+{
+    const ADT_ElementTypeInfo_t type = ADT_ELEMENT_TYPE_INFO(
+        MacroStruct,
+        NULL,
+        NULL,
+        MacroStructToNumber,
+        NULL);
+    MacroStruct value = {.value = 42};
+
+    return type.elementSize == sizeof(MacroStruct) &&
+           type.compare == NULL &&
+           type.print == NULL &&
+           type.toNumber == MacroStructToNumber &&
+           type.destroy == NULL &&
+           type.toNumber(&value) == 42.0;
+}
+
 bool C23CustomOperationsDispatchByAddress(void)
 {
-    const ADT_TypeInfo_t type = {
+    const ADT_ElementTypeInfo_t type = {
         .elementSize = sizeof(MacroStruct),
         .compare = NULL,
         .print = NULL,
@@ -257,7 +287,7 @@ bool C23CustomOperationsDispatchByAddress(void)
 
 bool C23FunctionPointersDispatchByAddress(void)
 {
-    const ADT_TypeInfo_t type = {
+    const ADT_ElementTypeInfo_t type = {
         .elementSize = sizeof(MacroFunctionFn_t),
         .compare = NULL,
         .print = NULL,

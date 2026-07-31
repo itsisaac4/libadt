@@ -36,6 +36,12 @@ static void PrintStudent(const void *element)
     printf("{id: %d, name: \"%s\"}", student->id, student->name);
 }
 
+static double StudentIdToNumber(const void *element)
+{
+    const Student_t *student = element;
+    return (double)student->id;
+}
+
 static void DestroyStudent(void *element)
 {
     Student_t *student = element;
@@ -65,11 +71,12 @@ static bool AppendStudent(LinkedList_t *students, int id, const char *name)
 
 int main(void)
 {
-    const ADT_TypeInfo_t studentType = {
-        .elementSize = sizeof(Student_t),
-        .compare = CompareStudent,
-        .print = PrintStudent,
-        .destroy = DestroyStudent};
+    const ADT_ElementTypeInfo_t studentType = ADT_ELEMENT_TYPE_INFO(
+        Student_t,
+        CompareStudent,
+        PrintStudent,
+        StudentIdToNumber,
+        DestroyStudent);
     LinkedList_t students = {0};
 
     if (!ll_Init(&students, studentType) ||

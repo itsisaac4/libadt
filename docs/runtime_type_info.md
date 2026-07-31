@@ -1,7 +1,7 @@
 # Runtime type information
 
 C does not attach runtime behavior to arbitrary values. libadt supplies that
-behavior explicitly through `ADT_TypeInfo_t`:
+behavior explicitly through `ADT_ElementTypeInfo_t`:
 
 ```c
 typedef struct
@@ -9,8 +9,9 @@ typedef struct
     size_t elementSize;
     CompareFn_t compare;
     PrintFn_t print;
+    ToNumberFn_t toNumber;
     DestroyFn_t destroy;
-} ADT_TypeInfo_t;
+} ADT_ElementTypeInfo_t;
 ```
 
 Every initialized container stores one copy of this information in its
@@ -68,6 +69,22 @@ static void PrintStudent(const void *element)
 `adt_Print` supplies the container formatting, separators, and newline. It
 returns `false` when no printer is configured.
 
+### `toNumber`
+
+The numeric projection converts an element to the common `double`
+representation used by numeric statistics:
+
+```c
+static double StudentScoreToNumber(const void *element)
+{
+    const Student_t *student = element;
+    return student->score;
+}
+```
+
+Use `NULL` when the type has no meaningful numeric representation. A custom
+type can choose a specific numeric field without changing its stored layout.
+
 ### `destroy`
 
 The destroy callback releases resources owned by an element. It must not free
@@ -99,9 +116,9 @@ DynamicArray_t numbers = {0};
 DA_INIT(&numbers, int);
 ```
 
-This configures `sizeof(int)`, `CompareInt`, `PrintInt`, and a `NULL`
-destructor. Primitive value functions use the same registry for `_Generic`
-dispatch.
+This configures `sizeof(int)`, `CompareInt`, `PrintInt`, `ToNumberInt`, and a
+`NULL` destructor. Primitive value functions use the same registry for
+`_Generic` dispatch.
 
 Pointer comparators and printers are available as `ComparePointer` and
 `PrintPointer`, but pointer ownership and meaning are application-specific, so
@@ -116,12 +133,12 @@ typedef struct
     char name[32];
 } Student_t;
 
-const ADT_TypeInfo_t studentType = {
-    .elementSize = sizeof(Student_t),
-    .compare = CompareStudent,
-    .print = PrintStudent,
-    .destroy = NULL
-};
+const ADT_ElementTypeInfo_t studentType = ADT_ELEMENT_TYPE_INFO(
+    Student_t,
+    CompareStudent,
+    PrintStudent,
+    StudentScoreToNumber,
+    NULL);
 
 DynamicArray_t students = {0};
 
@@ -137,3 +154,6 @@ Custom values are supplied by address to the unified operation macros:
 Student_t student = {.id = 1001, .name = "Ada"};
 da_Append(&students, &student);
 ```
+
+See [custom element types](custom_types.md) for complete callback declarations,
+resource ownership, and descriptors shared across source files.
