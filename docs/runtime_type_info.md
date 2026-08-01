@@ -1,8 +1,6 @@
-# Runtime type information
+# Runtime Element Type Information
 
-Container internals operate on type-erased elements through `void *`.
-`ADT_ElementTypeInfo_t` is the runtime descriptor that preserves the element
-size and behavior needed to interpret those bytes:
+Container internals operate on type-erased elements through `void *`. `ADT_ElementTypeInfo_t` is the runtime descriptor that preserves the element size and behavior needed to interpret those bytes:
 
 ```c
 typedef struct
@@ -25,12 +23,11 @@ Think of the descriptor as five answers the erased type can no longer provide:
 - How can it be projected to a number?
 - How are its owned resources released?
 
-## Type information fields
+## Type Information Fields
 
 ### `elementSize`
 
-`elementSize` is required and must be greater than zero. Containers use it for
-allocation, pointer arithmetic, and shallow byte copies.
+`elementSize` is required and must be greater than zero. Containers use it for allocation, pointer arithmetic, and shallow byte copies.
 
 The value must exactly match the stored type:
 
@@ -55,17 +52,15 @@ static int CompareStudent(const void *first, const void *second)
 }
 ```
 
-`adt_Min`, `adt_Max`, and `adt_Sort` require a comparator. `IndexOf` and
-`Contains` can fall back to byte comparison, but semantic comparison is
-usually the better choice for structures with padding or pointer members.
+`adt_Min`, `adt_Max`, and `adt_Sort` require a comparator. `IndexOf` and `Contains` can fall back to byte comparison, but semantic comparison is usually the better choice for structures with padding or pointer members.
 
-`adt_MinBy`, `adt_MaxBy`, and `adt_SortBy` accept a per-call comparator without
-changing the type information stored by the container.
+`adt_MinBy`, `adt_MaxBy`, and `adt_SortBy` accept a per-call comparator without changing the type information stored by the container.
+
+See [sorting](sorting.md) for the algorithm choices, comparator overrides, and temporary-buffer behavior.
 
 ### `print`
 
-The printer receives one element address and should print only that element,
-without a trailing newline:
+The printer receives one element address and should print only that element, without a trailing newline:
 
 ```c
 static void PrintStudent(const void *element)
@@ -75,8 +70,7 @@ static void PrintStudent(const void *element)
 }
 ```
 
-`adt_Print` supplies the container formatting, separators, and newline. It
-returns `false` when no printer is configured.
+`adt_Print` supplies the container formatting, separators, and newline. It returns `false` when no printer is configured.
 
 ### `toNumber`
 
@@ -90,14 +84,13 @@ static double StudentScoreToNumber(const void *element)
 }
 ```
 
-Use `NULL` when numeric statistics do not make sense for the type. A custom
-type can project a specific field—such as a student's score—without changing
-the stored structure.
+Use `NULL` when numeric statistics do not make sense for the type. A custom type can project a specific field—such as a student's score—without changing the stored structure.
+
+See [numeric statistics](statistics.md) for default projections, per-call overrides, and failure behavior.
 
 ### `destroy`
 
-The destroy callback releases resources owned by an element. It must not free
-the element storage passed to it because that storage belongs to the container.
+The destroy callback releases resources owned by an element. It must not free the element storage passed to it because that storage belongs to the container.
 
 Use `NULL` when the element owns no external resources:
 
@@ -107,10 +100,9 @@ Use `NULL` when the element owns no external resources:
 
 See [ownership](ownership.md) for the complete destruction and transfer rules.
 
-## Primitive type inference
+## Primitive Type Inference
 
-`DA_INIT`, `DA_INIT_FROM`, `LL_INIT`, `LL_INIT_FROM`, `ST_INIT`,
-`ST_INIT_FROM`, `QU_INIT`, and `QU_INIT_FROM` infer callbacks for:
+`DA_INIT`, `DA_INIT_FROM`, `LL_INIT`, `LL_INIT_FROM`, `ST_INIT`, `ST_INIT_FROM`, `QU_INIT`, and `QU_INIT_FROM` infer callbacks for:
 
 - `char`
 - `int`
@@ -126,15 +118,11 @@ DynamicArray_t numbers = {0};
 DA_INIT(&numbers, int);
 ```
 
-This configures `sizeof(int)`, `CompareInt`, `PrintInt`, `ToNumberInt`, and a
-`NULL` destructor. Primitive value functions use the same registry for
-compile-time `_Generic` dispatch.
+This configures `sizeof(int)`, `CompareInt`, `PrintInt`, `ToNumberInt`, and a `NULL` destructor. Primitive value functions use the same registry for compile-time `_Generic` dispatch.
 
-`ComparePointer` and `PrintPointer` are available for pointer values. The
-library intentionally does not infer pointer ownership; an address alone does
-not say whether it is borrowed, shared, or uniquely owned.
+`ComparePointer` and `PrintPointer` are available for pointer values. The library intentionally does not infer pointer ownership; an address alone does not say whether it is borrowed, shared, or uniquely owned.
 
-## Custom type example
+## Custom Type Example
 
 ```c
 typedef struct
@@ -165,5 +153,4 @@ Student_t student = {.id = 1001, .name = "Ada"};
 da_Append(&students, &student);
 ```
 
-See [custom element types](custom_types.md) for complete callback declarations,
-resource ownership, and descriptors shared across source files.
+See [custom element types](custom_types.md) for complete callback declarations, resource ownership, and descriptors shared across source files.

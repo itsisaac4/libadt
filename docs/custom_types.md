@@ -1,8 +1,6 @@
-# Custom element types
+# Custom Element Types
 
-libadt can store any complete C object type. A custom
-`ADT_ElementTypeInfo_t` acts as its runtime descriptor by providing the size
-and callback contracts needed after type erasure.
+libadt can store any complete C object type. A custom `ADT_ElementTypeInfo_t` acts as its runtime descriptor by providing the size and callback contracts needed after type erasure.
 
 For most custom types, setup is four steps:
 
@@ -11,7 +9,7 @@ For most custom types, setup is four steps:
 3. Collect them in an `ADT_ElementTypeInfo_t`.
 4. Initialize a container with that descriptor.
 
-## Define the element type
+## Define the Element Type
 
 This project uses the `_t` suffix for type names:
 
@@ -24,10 +22,9 @@ typedef struct
 } Student_t;
 ```
 
-Containers copy `sizeof(Student_t)` bytes into their own storage. Pointer
-members are copied shallowly; the pointed-to allocation is not cloned.
+Containers copy `sizeof(Student_t)` bytes into their own storage. Pointer members are copied shallowly; the pointed-to allocation is not duplicated.
 
-## Callback signatures
+## Callback Signatures
 
 Custom callbacks must exactly match the library function-pointer types:
 
@@ -38,8 +35,7 @@ double StudentScoreToNumber(const void *element);
 void DestroyStudent(void *element);
 ```
 
-Each callback receives the type-erased address of a stored `Student_t`, so it
-casts the generic pointer before accessing fields.
+Each callback receives the type-erased address of a stored `Student_t`, so it casts the generic pointer before accessing fields.
 
 ### Comparison
 
@@ -52,9 +48,7 @@ int CompareStudent(const void *first, const void *second)
 }
 ```
 
-The result must be negative, zero, or positive when `left` belongs before,
-equals, or belongs after `right`. Searching, extrema, and default sorting use
-this callback.
+The result must be negative, zero, or positive when `left` belongs before, equals, or belongs after `right`. Searching, extrema, and default sorting use this callback.
 
 ### Printing
 
@@ -69,10 +63,9 @@ void PrintStudent(const void *element)
 }
 ```
 
-Print only the element. `adt_Print` supplies container formatting, separators,
-and the trailing newline.
+Print only the element. `adt_Print` supplies container formatting, separators, and the trailing newline.
 
-### Numeric projection
+### Numeric Projection
 
 ```c
 double StudentScoreToNumber(const void *element)
@@ -82,10 +75,9 @@ double StudentScoreToNumber(const void *element)
 }
 ```
 
-The conversion returns the `double` used by the statistics functions. It can
-return whichever field the program wants to analyze.
+The conversion returns the `double` used by the statistics functions. It can return whichever field the program wants to analyze.
 
-### Resource destruction
+### Resource Destruction
 
 ```c
 void DestroyStudent(void *element)
@@ -96,10 +88,9 @@ void DestroyStudent(void *element)
 }
 ```
 
-Release only resources owned by the element. Do not free `element` itself;
-that storage belongs to the container.
+Release only resources owned by the element. Do not free `element` itself; that storage belongs to the container.
 
-## Create the element descriptor
+## Create the Element Descriptor
 
 `ADT_ELEMENT_TYPE_INFO` takes the stored type and all four optional callbacks:
 
@@ -112,8 +103,7 @@ const ADT_ElementTypeInfo_t studentType = ADT_ELEMENT_TYPE_INFO(
     DestroyStudent);
 ```
 
-Only `elementSize` is always required. Do not invent meaningless callbacks
-just to fill the descriptor; pass `NULL` for behavior that does not apply:
+Only `elementSize` is always required. Do not invent meaningless callbacks just to fill the descriptor; pass `NULL` for behavior that does not apply:
 
 ```c
 const ADT_ElementTypeInfo_t pointType = ADT_ELEMENT_TYPE_INFO(
@@ -126,7 +116,7 @@ const ADT_ElementTypeInfo_t pointType = ADT_ELEMENT_TYPE_INFO(
 
 Each callback enables a group of operations:
 
-| Descriptor field | Enables |
+| Descriptor Field | Enables |
 | --- | --- |
 | `elementSize` | Allocation and shallow element copies |
 | `compare` | Ordering, equality, extrema, and sorting |
@@ -134,11 +124,9 @@ Each callback enables a group of operations:
 | `toNumber` | Numeric statistics |
 | `destroy` | Cleanup of resources owned by elements |
 
-An operation returns `false` when its required callback is unavailable. That
-keeps an unsupported concept—such as the mean of an arbitrary record—from
-silently producing a made-up result.
+An operation returns `false` when its required callback is unavailable. That keeps an unsupported concept—such as the mean of an arbitrary record—from silently producing a made-up result.
 
-## Initialize and use a container
+## Initialize and Use a Container
 
 Custom elements use the normal initialization functions:
 
@@ -162,15 +150,11 @@ if (!da_Append(&students, &student))
 }
 ```
 
-After a successful insertion, the stored shallow copy assumes responsibility
-for resources described by `destroy`. This is the point where reading
-[ownership](ownership.md) saves real debugging time, especially when the
-structure contains owning pointers.
+After a successful insertion, the stored shallow copy assumes responsibility for resources described by `destroy`. This is the point where reading [ownership](ownership.md) saves real debugging time, especially when the structure contains owning pointers.
 
-## Share a custom type across source files
+## Share a Custom Type Across Source Files
 
-Place the element definition, callback declarations, and descriptor declaration
-in an application header:
+Place the element definition, callback declarations, and descriptor declaration in an application header:
 
 ```c
 #ifndef STUDENT_H
@@ -207,16 +191,10 @@ const ADT_ElementTypeInfo_t STUDENT_ELEMENT_TYPE =
         DestroyStudent);
 ```
 
-Use `static` callbacks instead when the custom type is needed in only one
-source file. This keeps those names private to that translation unit.
+Use `static` callbacks instead when the custom type is needed in only one source file. This keeps those names private to that translation unit.
 
-## Why custom types need a descriptor
+## Why Custom Types Need a Descriptor
 
-C can calculate `sizeof(Student_t)`, but it cannot guess whether students
-should compare by ID or name, how they should print, which field is numeric, or
-whether they own pointer fields.
+C can calculate `sizeof(Student_t)`, but it cannot guess whether students should compare by ID or name, how they should print, which field is numeric, or whether they own pointer fields.
 
-`ADT_ElementTypeInfo_t` connects those choices to the stored type. In a
-class-based language, similar behavior might live in methods or interfaces.
-In C, the descriptor makes that contract explicit instead of pretending the
-compiler can infer it.
+`ADT_ElementTypeInfo_t` connects those choices to the stored type. In a class-based language, similar behavior might live in methods or interfaces. In C, the descriptor makes that contract explicit instead of pretending the compiler can infer it.

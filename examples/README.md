@@ -1,11 +1,10 @@
-# libadt examples
+# libadt Examples
 
-Each example is a focused C23 program with its own executable. From this
-directory, run `make list`, `make` to build everything, or one target below.
-The examples include `libadt/libadt.h`, which exposes the complete public API.
+Each example is a focused C23 program with its own executable. From this directory, run `make list`, `make` to build everything, or one target below. The examples include `libadt/libadt.h`, which exposes the complete public API.
 
 | Target | Example | Demonstrates |
 | --- | --- | --- |
+| `make video-walkthrough` | `common/video_walkthrough.c` | Presentation-friendly tour of polymorphism, ADTs, generic dispatch, callbacks, and cleanup |
 | `make polymorphism` | `common/polymorphism.c` | One shared function over all four container types |
 | `make dynamic-array` | `dynamic_array/quick_start.c` | Unified element operations and lookup |
 | `make dynamic-array-basic` | `dynamic_array/basic.c` | Unchecked array operations with state after each change |

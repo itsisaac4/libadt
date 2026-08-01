@@ -1,13 +1,10 @@
 # Stacks
 
-`Stack_t` stores elements in last-in, first-out order. It uses
-`ContiguousStorage_t`, so the top of the stack is the end of a resizable
-allocation.
+`Stack_t` stores elements in last-in, first-out order. It uses `ContiguousStorage_t`, so the top of the stack is the end of a resizable allocation.
 
-The public API stays intentionally small: push, inspect the top, and either
-pop or discard it.
+The public API stays intentionally small: push, inspect the top, and either pop or discard it.
 
-## Quick start
+## Quick Start
 
 ```c
 #include "libadt/libadt.h"
@@ -35,17 +32,15 @@ if (ST_INIT(&stack, int))
 | Removal | `st_Pop`, `st_Discard`, `st_Clear`, `st_Destroy` |
 | Shared | `adt_Size`, `adt_IsEmpty`, `adt_Print`, statistics, `adt_Sort` |
 
-`ST_INIT_FROM` reads its input from bottom to top, so the last array element
-becomes the top. Shared traversal also runs from bottom to top.
+`ST_INIT_FROM` reads its input from bottom to top, so the last array element becomes the top. Shared traversal also runs from bottom to top.
+
+Use `ST_INIT` and `ST_INIT_FROM` for inferred primitive behavior. Use `st_Init` or `st_InitFrom` with an `ADT_ElementTypeInfo_t` when the element is a custom type.
 
 ## Ownership
 
-`st_Push` stores a shallow copy. `st_Pop` transfers the removed element and its
-owned resources to the caller. `st_Discard`, `st_Clear`, and `st_Destroy`
-invoke the configured destroy callback.
+`st_Push` stores a shallow copy. `st_Pop` transfers the removed element and its owned resources to the caller. `st_Discard`, `st_Clear`, and `st_Destroy` invoke the configured destroy callback.
 
-The output passed to `st_Pop` cannot point inside the stack's contiguous
-storage because removal could invalidate that address.
+The output passed to `st_Pop` cannot point inside the stack's contiguous storage because removal could invalidate that address.
 
 ## Complexity
 
@@ -54,7 +49,12 @@ storage because removal could invalidate that address.
 | Push | Amortized O(1) |
 | Peek | O(1) |
 | Pop or discard | O(1) |
-| Clear or destroy | O(n) when elements require destruction |
+| Clear or destroy | O(n) |
 
-`st_Clear` retains the allocation for reuse. `st_Destroy` releases it and
-resets the shared type information.
+`st_Clear` retains the allocation for reuse. `st_Destroy` releases it and resets the shared type information.
+
+## Lifecycle
+
+Zero-initialize a stack before its first initialization. Do not initialize a live stack again; call `st_Destroy` first. After destruction, the reset stack may be initialized again.
+
+See [ownership](ownership.md) for custom resource rules and [storage composition](storage.md) for the contiguous-storage design.

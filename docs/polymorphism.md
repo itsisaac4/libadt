@@ -1,18 +1,15 @@
 # Polymorphism
 
-libadt combines first-member embedding with a small vtable. The shared layout
-supports inheritance-like upcasting, while the vtable provides dynamic
-dispatch across container representations.
+I combined first-member embedding with a small vtable so the shared API could operate on every container without hiding their different representations. The shared layout supports inheritance-like upcasting, while the vtable provides dynamic dispatch.
 
 These are two separate mechanisms:
 
 1. `ADT_Super_t` gives shared functions a common view of container state.
-2. `ADT_VTable_t` tells those functions how to traverse the concrete
-   representation.
+2. `ADT_VTable_t` tells those functions how to traverse the concrete representation.
 
-The first shares data layout. The second selects behavior.
+The first shares data layout; the second selects behavior.
 
-## Shared layout
+## Shared Layout
 
 `ADT_Super_t` is the first member of every container:
 
@@ -38,20 +35,13 @@ typedef struct
 } LinkedList_t;
 ```
 
-The container headers use static assertions to keep `super` at offset zero.
-The container and its embedded base therefore have the same address, allowing
-the container pointer to be upcast to `ADT_t *`. Shared functions only access
-the common base fields.
+The container headers use static assertions to keep `super` at offset zero. The container and its embedded base therefore have the same address, allowing the container pointer to be upcast to `ADT_t *`. Shared functions only access the common base fields.
 
-This is the part where C requires discipline. It is a memory-layout convention,
-not language-supported inheritance. Moving `super` away from the first member
-would invalidate the upcast, which is why the static assertions matter.
+This is the part where C requires discipline. It is a memory-layout convention, not language-supported inheritance. Moving `super` away from the first member would invalidate the upcast, which is why the static assertions matter.
 
-## Traversal vtable
+## Traversal Vtable
 
-The shared algorithms need to visit elements, but they should not need to know
-whether those elements are in an array or linked nodes. Each container provides
-two functions through `ADT_VTable_t`:
+The shared algorithms need to visit elements, but they should not need to know whether those elements are in an array or linked nodes. Each container provides two functions through `ADT_VTable_t`:
 
 - `visit` passes each element as `const void *`.
 - `visitMutable` passes each element as `void *`.
@@ -81,13 +71,11 @@ for (size_t i = 0; i < ARRAY_COUNT(containers); i++)
 }
 ```
 
-The call to `ProcessContainer` is the same for all four types. At runtime,
-dynamic dispatch selects the traversal function for the concrete container.
-Together, the type-erased base pointer and vtable provide runtime polymorphism.
+The call to `ProcessContainer` is the same for all four types. At runtime, dynamic dispatch selects the traversal function for the concrete container. Together, the type-erased base pointer and vtable provide runtime polymorphism.
 
-## What the shared operations require
+## What the Shared Operations Require
 
-| Function | What it uses |
+| Function | What It Uses |
 | --- | --- |
 | `adt_ForEach` | Read-only traversal |
 | `adt_ForEachMutable` | Mutable traversal |
@@ -102,20 +90,17 @@ Sorting is the clearest tradeoff in this design:
 2. Sort the buffer.
 3. Write the result back through mutable traversal.
 
-That is not the most specialized algorithm for every representation, but it
-keeps one sorting implementation independent of array or node storage.
+That is not the most specialized algorithm for every representation, but it keeps one sorting implementation independent of array or node storage.
 
-## What stays container-specific
+See [sorting](sorting.md) for the available algorithms and the consequences of this temporary-buffer design.
 
-The vtable is deliberately small. A stack has `st_Push` and `st_Pop`; a queue
-has `qu_Enqueue` and `qu_Dequeue`. Those operations do not make sense for every
-ADT, so putting them in the shared base would make the abstraction less
-honest, not more polymorphic.
+## What Stays Container-Specific
 
-The same rule applies to primitive wrappers. Each concrete ADT defines the
-element operations it actually supports.
+The vtable is deliberately small. A stack has `st_Push` and `st_Pop`; a queue has `qu_Enqueue` and `qu_Dequeue`. Those operations do not make sense for every ADT, so putting them in the shared base would make the abstraction less honest, not more polymorphic.
 
-## Adding another container
+The same rule applies to primitive wrappers. Each concrete ADT defines the element operations it actually supports.
+
+## Adding Another Container
 
 A new container can use the shared operations if it:
 
@@ -126,5 +111,4 @@ A new container can use the shared operations if it:
 5. Updates the shared size after successful insertions and removals.
 6. Follows the library's shallow-copy and ownership rules.
 
-The container may use an existing storage component or provide a different
-representation. See [storage composition](storage.md) for the storage layer.
+The container may use an existing storage component or provide a different representation. See [storage composition](storage.md) for the storage layer.

@@ -9,31 +9,34 @@ typedef struct
     ADT_SortAlgorithm_t algorithm;
 } SortExample_t;
 
-static bool RunSort(DynamicArray_t array, const SortExample_t *example)
+static bool RunSort(DynamicArray_t *array, const SortExample_t *example)
 {
-
-    if (!adt_Sort(&array, example->algorithm))
+    if (!adt_Sort(array, example->algorithm))
     {
         return false;
     }
 
     printf("%s: ", example->name);
-    bool printed = adt_Print(&array);
-    return printed;
+    return adt_Print(array);
 }
 
 int main(void)
 {
     int values[] = {4, 1, 3, 2};
-    DynamicArray_t numbers;
+    DynamicArray_t numbers = {0};
 
     if (!DA_INIT_FROM(&numbers, values))
     {
-        da_Destroy(&numbers);
+        return EXIT_FAILURE;
     }
 
     printf("Original: ");
-    adt_Print(&numbers);
+    if (!adt_Print(&numbers))
+    {
+        da_Destroy(&numbers);
+        return EXIT_FAILURE;
+    }
+    da_Destroy(&numbers);
 
     SortExample_t examples[] = {
         {.name = "Bubble", .algorithm = ADT_SORT_BUBBLE},
@@ -44,10 +47,18 @@ int main(void)
 
     for (size_t i = 0; i < ARRAY_COUNT(examples); i++)
     {
-        if (!RunSort(numbers, &examples[i]))
+        if (!DA_INIT_FROM(&numbers, values))
         {
             return EXIT_FAILURE;
         }
+
+        if (!RunSort(&numbers, &examples[i]))
+        {
+            da_Destroy(&numbers);
+            return EXIT_FAILURE;
+        }
+
+        da_Destroy(&numbers);
     }
 
     return EXIT_SUCCESS;

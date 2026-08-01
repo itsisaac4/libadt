@@ -1,12 +1,10 @@
-# Linked lists
+# Linked Lists
 
-`LinkedList_t` is a doubly linked list with stored head and tail pointers. Each
-node has its own element allocation.
+`LinkedList_t` is a doubly linked list with stored head and tail pointers. Each node has its own element allocation.
 
-Choose it when insertion at either end matters more than indexed access or
-contiguous memory locality.
+Choose it when insertion at either end matters more than indexed access or contiguous memory locality.
 
-## Quick start
+## Quick Start
 
 ```c
 #include <stdlib.h>
@@ -32,8 +30,7 @@ int main(void)
 }
 ```
 
-Use `LL_INIT(&list, type)` for an empty primitive list and
-`LL_INIT_FROM(&list, values)` for a fixed-size C array.
+Use `LL_INIT(&list, type)` for an empty primitive list and `LL_INIT_FROM(&list, values)` for a fixed-size C array.
 
 ## Operations
 
@@ -46,10 +43,15 @@ Use `LL_INIT(&list, type)` for an empty primitive list and
 | Removal | `ll_Remove`, `ll_Take`, `ll_Clear`, `ll_Destroy` |
 | Shared | `adt_Size`, `adt_IsEmpty`, `adt_Print`, statistics, `adt_Sort` |
 
-Each operation supports any type matching the list's initialized element type.
-Pass supported primitives directly and all other types by address.
+Each operation supports any type matching the list's initialized element type. Pass supported primitives directly and all other types by address.
 
-## Access and removal
+## Search and Replacement
+
+`ll_IndexOf` writes the first matching index to its output parameter, while `ll_Contains` reports only whether a match exists. Both use the configured comparator when one is available and otherwise compare the stored bytes. A comparator is the safer definition of equality for custom structures with padding or pointer members.
+
+`ll_Set` releases resources owned by the element being replaced and then stores a shallow copy of the replacement. After a successful call, the stored copy assumes responsibility for resources described by the descriptor's `destroy` callback.
+
+## Access and Removal
 
 `ll_Get` copies an element into caller-provided storage without removing it:
 
@@ -58,8 +60,7 @@ int value = 0;
 ll_Get(&numbers, 2, &value);
 ```
 
-Use `ll_Remove` to destroy a removed element. Use `ll_Take` to transfer its
-value and owned resources:
+Use `ll_Remove` to destroy a removed element. Use `ll_Take` to transfer its value and owned resources:
 
 ```c
 Student_t student = {0};
@@ -71,10 +72,9 @@ if (ll_Take(&students, index, &student))
 }
 ```
 
-The output storage passed to `ll_Take` cannot point into any element currently
-stored by the list.
+The output storage passed to `ll_Take` cannot point into any element currently stored by the list.
 
-## Custom element types
+## Custom Element Types
 
 ```c
 const ADT_ElementTypeInfo_t studentType = ADT_ELEMENT_TYPE_INFO(
@@ -95,11 +95,11 @@ if (ll_Init(&students, studentType))
         DestroyStudent(&student);
     }
 }
+
+ll_Destroy(&students);
 ```
 
-After a successful append, the stored shallow copy is responsible for resources
-described by `DestroyStudent`. See [custom element types](custom_types.md) and
-[ownership](ownership.md) for the ownership rules.
+After a successful append, the stored shallow copy is responsible for resources described by `DestroyStudent`. See [custom element types](custom_types.md) and [ownership](ownership.md) for the ownership rules.
 
 ## Complexity
 
@@ -115,11 +115,9 @@ described by `DestroyStudent`. See [custom element types](custom_types.md) and
 Two representation details explain most of the complexity:
 
 - Indexed lookup starts from whichever end is closer.
-- Insertion does not shift existing elements, but each element needs a node
-  allocation and an element allocation.
+- Insertion does not shift existing elements, but each element needs a node allocation and an element allocation.
 
-`Clear` releases every node while retaining runtime type information. The list
-can immediately be reused. `Destroy` also resets the shared type information.
+`Clear` releases every node while retaining runtime type information. The list can immediately be reused. `Destroy` also resets the shared type information.
 
 ## Lifecycle
 
@@ -129,5 +127,4 @@ Zero-initialize before the first initialization:
 LinkedList_t list = {0};
 ```
 
-Do not initialize a live list again. Call `ll_Destroy` first. After
-`ll_Destroy`, the list is reset and may be initialized again.
+Do not initialize a live list again. Call `ll_Destroy` first. After `ll_Destroy`, the list is reset and may be initialized again.

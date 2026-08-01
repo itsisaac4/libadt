@@ -25,7 +25,7 @@ LIBADT_SOURCES ?= \
 
 COMMON_DIR := common
 COMMON_BUILD_DIR := $(BUILD_DIR)/common
-COMMON_EXAMPLES := polymorphism
+COMMON_EXAMPLES := polymorphism video_walkthrough
 COMMON_BINARIES := $(addprefix $(COMMON_BUILD_DIR)/,$(COMMON_EXAMPLES))
 
 DYNAMIC_ARRAY_DIR := dynamic_array
@@ -62,7 +62,7 @@ STATISTICS_EXAMPLES := summary
 STATISTICS_BINARIES := \
 	$(addprefix $(STATISTICS_BUILD_DIR)/,$(STATISTICS_EXAMPLES))
 
-.PHONY: all clean list polymorphism dynamic-array student-records debug-view \
+.PHONY: all clean list polymorphism video-walkthrough dynamic-array student-records debug-view \
 	dynamic-array-basic linked-list owned-records linked-list-basic stack \
 	stack-basic queue queue-basic sorting custom-order statistics
 
@@ -72,6 +72,7 @@ all: $(COMMON_BINARIES) $(DYNAMIC_ARRAY_BINARIES) $(LINKED_LIST_BINARIES) \
 list:
 	@printf '%s\n' \
 		'make polymorphism   # one shared API over every container' \
+		'make video-walkthrough # presentation-friendly tour of course concepts' \
 		'make dynamic-array  # primitive dynamic-array operations' \
 		'make dynamic-array-basic # unchecked array operation walkthrough' \
 		'make student-records # custom dynamic-array callbacks' \
@@ -144,6 +145,9 @@ $(STATISTICS_BUILD_DIR)/%: \
 	$(CC) $(CPPFLAGS) $(CFLAGS) $^ -o $@
 
 polymorphism: $(COMMON_BUILD_DIR)/polymorphism
+	./$<
+
+video-walkthrough: $(COMMON_BUILD_DIR)/video_walkthrough
 	./$<
 
 dynamic-array: $(DYNAMIC_ARRAY_BUILD_DIR)/quick_start

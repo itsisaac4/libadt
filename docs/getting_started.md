@@ -1,10 +1,8 @@
-# Getting started
+# Getting Started
 
-libadt provides dynamic arrays, linked lists, stacks, and queues. Start with a
-concrete prefix such as `da_*` or `qu_*` for container operations, then use the
-shared `adt_*` API for printing, traversal, statistics, and sorting.
+libadt provides dynamic arrays, linked lists, stacks, and queues. Start with a concrete prefix such as `da_*` or `qu_*` for container operations, then use the shared `adt_*` API for printing, traversal, statistics, and sorting.
 
-## Build the project
+## Build the Project
 
 From the repository root:
 
@@ -14,8 +12,7 @@ make test
 make -C examples
 ```
 
-The tests require CppUTest. The library and examples require a compiler with
-C23 support.
+The tests require CppUTest. The library and examples require a compiler with C23 support.
 
 To compile a small program directly against the sources:
 
@@ -25,10 +22,9 @@ cc -std=c23 -Iinclude program.c \
     src/containers/*/*.c -o program
 ```
 
-## Create a container
+## Create a Container
 
-Include `libadt/libadt.h` for the full public API. The initialization macros
-fill in type information for supported primitive types:
+Include `libadt/libadt.h` for the full public API. The initialization macros fill in type information for supported primitive types:
 
 ```c
 #include <stdlib.h>
@@ -61,17 +57,75 @@ Three rules cover most first-time mistakes:
 - Check operations that return `bool`.
 - Call the matching destroy function when finished.
 
-Individual container headers are also available if a program only wants part
-of the API.
+### Initialization Forms
 
-One easy trap: `DA_INIT_FROM`, `LL_INIT_FROM`, `ST_INIT_FROM`, and
-`QU_INIT_FROM` require a fixed-size C array. A pointer does not carry its
-element count, so it cannot be used here.
+Each container has two uppercase convenience macros and two lowercase initialization functions. Use the `DA`/`da`, `LL`/`ll`, `ST`/`st`, or `QU`/`qu` prefix for the container being initialized.
 
-## Element operations
+The `*_INIT` macros create an empty primitive container and infer its comparator, printer, and numeric projection from the type:
 
-The same operation names accept every initialized element type. Supported
-primitives can be passed directly:
+```c
+DynamicArray_t numbers = {0};
+
+if (!DA_INIT(&numbers, int))
+{
+    return false;
+}
+```
+
+The `*_INIT_FROM` macros also infer the element count and type from a fixed-size C array:
+
+```c
+int values[] = {30, 10, 20};
+DynamicArray_t numbers = {0};
+
+if (!DA_INIT_FROM(&numbers, values))
+{
+    return false;
+}
+```
+
+These macros support `char`, `int`, `unsigned int`, `long`, `float`, and `double`. An `_INIT_FROM` argument must be an actual array because the macro uses `ARRAY_COUNT`; a pointer does not contain its element count.
+
+The lowercase `*_Init` functions accept an explicit descriptor, which is the normal choice for custom types:
+
+```c
+const ADT_ElementTypeInfo_t studentType = ADT_ELEMENT_TYPE_INFO(
+    Student_t,
+    CompareStudent,
+    PrintStudent,
+    StudentScoreToNumber,
+    DestroyStudent);
+
+DynamicArray_t students = {0};
+
+if (!da_Init(&students, studentType))
+{
+    return false;
+}
+```
+
+Use `*_InitFrom` when both an explicit descriptor and initial elements are available:
+
+```c
+if (!da_InitFrom(
+        &students,
+        initialStudents,
+        studentCount,
+        studentType))
+{
+    return false;
+}
+```
+
+`*_InitFrom` accepts a pointer to contiguous elements and a separate `size_t` count. Both `FROM` forms make shallow copies in traversal order: index order for arrays and lists, bottom to top for stacks, and front to back for queues.
+
+Do not initialize a live container again. Call its matching `Destroy` function first; destruction resets it so it can be initialized again.
+
+Individual headers are also available when a program only wants part of the API. Include `libadt/abstract_data_type.h` for shared `adt_*` operations, then include only the concrete container headers the program uses.
+
+## Element Operations
+
+The same operation names accept every initialized element type. Supported primitives can be passed directly:
 
 ```c
 da_Append(&numbers, 42);
@@ -80,22 +134,20 @@ st_Push(&numberStack, 42);
 qu_Enqueue(&numberQueue, 42);
 ```
 
-The supported primitive types are `char`, `int`, `unsigned int`, `long`,
-`float`, and `double`. Value dispatch uses C23 `_Generic`.
+The supported primitive types are `char`, `int`, `unsigned int`, `long`, `float`, and `double`. Value dispatch uses C23 `_Generic`.
 
-Pass the address of custom structures, pointer elements, function pointers, and
-other types:
+Macros such as `da_Append` and `st_Push` are the common entry points. For a supported primitive, `_Generic` selects a value wrapper that receives the value naturally and forwards its address to the implementation. The default association uses the reference-based path for custom structures, pointers, function pointers, and other element types, so the public operation name stays the same in both cases.
+
+Pass the address of custom structures, pointer elements, function pointers, and other types:
 
 ```c
 Person_t person = {.id = 1001};
 da_Append(&people, &person);
 ```
 
-The important rule is that the argument type must match the type used to
-initialize the container. The container copies `sizeof(Person_t)` bytes; it
-does not perform a deep copy.
+The important rule is that the argument type must match the type used to initialize the container. The macro improves call syntax, but after dispatch the implementation still works with type-erased bytes and cannot recover a mismatched source type.
 
-## Shared operations
+## Shared Operations
 
 Functions prefixed with `adt_` accept any initialized libadt container:
 
@@ -109,11 +161,11 @@ adt_Mode(&numbers, &mode);
 adt_Sort(&numbers, ADT_SORT_INSERTION);
 ```
 
-These functions use the container's traversal vtable and element callbacks.
-See [runtime type information](runtime_type_info.md) and
-[polymorphism](polymorphism.md) for the implementation.
+These functions use the container's traversal vtable and element callbacks. See [runtime element type information](runtime_type_info.md) and [polymorphism](polymorphism.md) for the implementation.
 
-## Next steps
+The default extrema and sorting operations use the descriptor's `compare` callback, while the default statistics operations use `toNumber`. Their `adt_*By` variants accept a callback for one call without modifying the descriptor, which lets the same custom type be ordered or projected in more than one way.
+
+## Next Steps
 
 - [Dynamic arrays](dynamic_array.md)
 - [Linked lists](linked_list.md)
@@ -121,7 +173,8 @@ See [runtime type information](runtime_type_info.md) and
 - [Queues](queue.md)
 - [Storage composition](storage.md)
 - [Ownership and shallow copying](ownership.md)
-- [Runtime type information](runtime_type_info.md)
+- [Runtime element type information](runtime_type_info.md)
 - [Numeric statistics](statistics.md)
+- [Sorting](sorting.md)
 - [Polymorphism](polymorphism.md)
 - [Compilable examples](../examples/README.md)

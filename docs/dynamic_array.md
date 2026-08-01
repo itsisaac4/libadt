@@ -1,12 +1,10 @@
-# Dynamic arrays
+# Dynamic Arrays
 
-`DynamicArray_t` stores elements in one allocation and grows that allocation
-when it runs out of capacity.
+`DynamicArray_t` stores elements in one allocation and grows that allocation when it runs out of capacity.
 
-Choose it when indexed access and cache-friendly traversal matter more than
-the cost of shifting elements during middle insertions.
+Choose it when indexed access and cache-friendly traversal matter more than the cost of shifting elements during middle insertions.
 
-## Quick start
+## Quick Start
 
 ```c
 #include <stdlib.h>
@@ -32,8 +30,7 @@ int main(void)
 }
 ```
 
-Use `DA_INIT(&array, type)` for an empty primitive array and
-`DA_INIT_FROM(&array, values)` for a fixed-size C array.
+Use `DA_INIT(&array, type)` for an empty primitive array and `DA_INIT_FROM(&array, values)` for a fixed-size C array.
 
 ## Operations
 
@@ -46,10 +43,15 @@ Use `DA_INIT(&array, type)` for an empty primitive array and
 | Removal | `da_Remove`, `da_Take`, `da_Clear`, `da_Destroy` |
 | Shared | `adt_Size`, `adt_IsEmpty`, `adt_Print`, statistics, `adt_Sort` |
 
-Each operation supports any type matching the array's initialized element
-type. Pass supported primitives directly and all other types by address.
+Each operation supports any type matching the array's initialized element type. Pass supported primitives directly and all other types by address.
 
-## Access and removal
+## Search and Replacement
+
+`da_IndexOf` writes the first matching index to its output parameter, while `da_Contains` reports only whether a match exists. Both use the configured comparator when one is available and otherwise compare the stored bytes. A comparator is the safer definition of equality for custom structures with padding or pointer members.
+
+`da_Set` releases resources owned by the element being replaced and then stores a shallow copy of the replacement. After a successful call, the stored copy assumes responsibility for resources described by the descriptor's `destroy` callback.
+
+## Access and Removal
 
 `da_Get` copies an element into caller-provided storage:
 
@@ -62,11 +64,9 @@ if (da_Get(&numbers, 2, &value))
 }
 ```
 
-This is a non-owning shallow copy. It does not remove the element or transfer
-its resources.
+This is a non-owning shallow copy. It does not remove the element or transfer its resources.
 
-Use `da_Remove` when the removed element should be destroyed. Use `da_Take`
-when its value and owned resources should transfer to the caller:
+Use `da_Remove` when the removed element should be destroyed. Use `da_Take` when its value and owned resources should transfer to the caller:
 
 ```c
 Student_t student = {0};
@@ -78,10 +78,9 @@ if (da_Take(&students, index, &student))
 }
 ```
 
-The output storage passed to `da_Take` cannot point inside the dynamic array,
-because moving the remaining elements would invalidate or overwrite it.
+The output storage passed to `da_Take` cannot point inside the dynamic array, because moving the remaining elements would invalidate or overwrite it.
 
-## Custom element types
+## Custom Element Types
 
 ```c
 const ADT_ElementTypeInfo_t studentType = ADT_ELEMENT_TYPE_INFO(
@@ -102,11 +101,11 @@ if (da_Init(&students, studentType))
         DestroyStudent(&student);
     }
 }
+
+da_Destroy(&students);
 ```
 
-The append copies the structure, not resources referenced by its fields. See
-[custom element types](custom_types.md) and [ownership](ownership.md) before
-using a non-`NULL` destroy callback.
+The append copies the structure, not resources referenced by its fields. See [custom element types](custom_types.md) and [ownership](ownership.md) before using a non-`NULL` destroy callback.
 
 ## Complexity
 
@@ -117,7 +116,7 @@ using a non-`NULL` destroy callback.
 | Prepend or indexed insertion | O(n) |
 | Search | O(n) |
 | Remove | O(n) |
-| Clear or destroy | O(n) when elements require destruction |
+| Clear or destroy | O(n) |
 
 In practice:
 
@@ -133,5 +132,4 @@ Zero-initialize before the first initialization:
 DynamicArray_t array = {0};
 ```
 
-Do not initialize a live array again. Call `da_Destroy` first. After
-`da_Destroy`, the array is reset and may be initialized again.
+Do not initialize a live array again. Call `da_Destroy` first. After `da_Destroy`, the array is reset and may be initialized again.
