@@ -1,6 +1,8 @@
 # Sorting
 
-Every libadt container can be sorted through the shared `adt_*` API. The public call stays the same across representations because the implementation reads elements through read-only traversal, sorts a temporary contiguous buffer, and writes the result back through mutable traversal.
+Every libadt container uses the shared `adt_*` sorting API.
+
+The implementation copies through read-only traversal, sorts a temporary buffer, and writes back through mutable traversal.
 
 ## Default and Override Comparators
 
@@ -29,7 +31,61 @@ adt_SortBy(
     CompareStudentScoreDescending);
 ```
 
-This is useful when the descriptor defines the normal ordering, such as student ID, but one operation needs a different ordering, such as descending score. Both functions require a non-`NULL` comparator; the `By` form is an override, not a fallback to the stored comparator.
+Use the `By` form when one operation needs a different ordering. Both forms require a non-`NULL` comparator.
+
+## Checking Existing Order
+
+`adt_isSorted` uses the configured comparator. `adt_isSortedBy` uses a per-call comparator.
+
+Both are O(n) checks available for every container.
+
+Binary search is available only for dynamic arrays and stacks. Those ADTs use `ContiguousStorage_t`.
+
+Linked lists and queues do not provide binary search.
+
+Binary search requires the same comparator that defines the current order. Check first when the ordering is uncertain:
+
+```c
+if (adt_isSorted(&numbers))
+{
+    int target = 42;
+    size_t index = 0;
+    da_BinarySearch(&numbers, &target, &index);
+}
+```
+
+The default sortedness and binary-search functions use the comparator stored during initialization. This is sufficient when a type uses one ordering.
+
+For an override ordering, pass the same comparator to both `By` functions:
+
+```c
+if (adt_isSortedBy(&numbers, CompareStudentScoreDescending) &&
+    da_BinarySearchBy(
+        &numbers,
+        CompareStudentScoreDescending,
+        &target,
+        &index))
+{
+    UseIndex(index);
+}
+```
+
+Empty, single-element, and equal-element sequences are sorted.
+
+The check costs O(n). Binary search costs O(log n). Skip the check when the ordering is already known.
+
+### Why Sortedness Is Checked on Demand
+
+Sortedness is checked on demand because a cache is easy to invalidate incorrectly:
+
+- Sortedness depends on the comparator.
+- Every mutable operation would need to update the cache.
+- Referenced comparison keys can change outside the container.
+- Comparator behavior can depend on external state.
+
+Callers may check uncertain ordering or search directly under a known ordering contract.
+
+A future cache would need a known/unknown state, comparator identity, and systematic mutation tracking. A single flag in `ADT_Super_t` would not be sufficient.
 
 ## Available Algorithms
 
@@ -43,11 +99,15 @@ The algorithm is selected with `ADT_SortAlgorithm_t` from `include/libadt/abstra
 | `ADT_SORT_QUICK` | Partitions elements around a pivot | Not stable | O(n log n) average; O(n²) worst case |
 | `ADT_SORT_BOGO` | Randomly shuffles until sorted or until a safety limit is reached | Not stable | Intentionally impractical |
 
-Quick sort is the general-purpose choice in this library. Insertion sort is useful for small or nearly sorted inputs, while bubble and selection sort are included as straightforward algorithm implementations. Bogo sort is included as a bounded demonstration rather than a practical choice.
+Quick sort is the general-purpose choice. Insertion sort suits small or nearly sorted inputs.
+
+Bubble and selection sort are straightforward alternatives. Bogo sort is only a bounded demonstration.
 
 ## Bounded Bogo Sort
 
-The bogo implementation first checks whether the input is already sorted. Otherwise, it refuses collections larger than eight elements and stops after 100,000 shuffles. If it reaches either bound without producing a sorted order, `adt_Sort` returns `false` and the container keeps its original order.
+Bogo sort first checks for existing order. It rejects unsorted collections larger than eight elements and stops after 100,000 shuffles.
+
+Failure returns `false` without changing the container.
 
 ## Representation-Independent Sorting
 
@@ -57,7 +117,9 @@ The shared sorting path performs three steps:
 2. Run the selected algorithm on that buffer.
 3. Copy the sorted bytes back through `adt_ForEachMutable`.
 
-This design lets one implementation sort dynamic arrays, linked lists, stacks, and queues without exposing their storage layouts to the sorting algorithms. It uses temporary memory proportional to the number and size of the stored elements, even when the original container already uses contiguous storage.
+This design supports every container without exposing its storage layout.
+
+It uses temporary memory proportional to the stored data, even for contiguous containers.
 
 Sorting rearranges shallow element records without calling their destroy callbacks. Resources referenced by an element move with that record, so ownership remains with the same logical stored element.
 
@@ -72,10 +134,19 @@ Sorting returns `false` when:
 - The temporary buffer size overflows or allocation fails.
 - Bounded bogo sort cannot complete within its limits.
 
+Sortedness functions return `false` for invalid state, a missing comparator, or allocation failure.
+
+Therefore, `false` can mean either "not sorted" or "the check could not be performed."
+
 The implementation finishes sorting the temporary buffer before writing anything back. Allocation, validation, and bogo-limit failures therefore leave the container order unchanged.
 
 ## Adding Another Algorithm
 
-Adding an algorithm requires more than adding a name to the enum. Add the new value to `ADT_SortAlgorithm_t`, implement its temporary-buffer sorting function in `src/shared/sorting.c`, connect it to the dispatch switch in `adt_SortBy`, and add tests for normal, empty, invalid, and custom-comparator cases.
+To add an algorithm:
+
+1. Add its `ADT_SortAlgorithm_t` value.
+2. Implement its buffer function in `src/shared/sorting.c`.
+3. Connect it to `adt_SortBy`.
+4. Test normal, empty, invalid, and custom-comparator cases.
 
 See [`examples/sorting/algorithms.c`](../examples/sorting/algorithms.c) for every built-in algorithm and [`examples/sorting/custom_order.c`](../examples/sorting/custom_order.c) for per-call comparator overrides.

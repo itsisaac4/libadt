@@ -52,9 +52,13 @@ static int CompareStudent(const void *first, const void *second)
 }
 ```
 
-`adt_Min`, `adt_Max`, and `adt_Sort` require a comparator. `IndexOf` and `Contains` can fall back to byte comparison, but semantic comparison is usually the better choice for structures with padding or pointer members.
+`adt_Min`, `adt_Max`, `adt_Sort`, `adt_isSorted`, and binary search require a comparator. `IndexOf` and `Contains` can fall back to byte comparison, but semantic comparison is usually the better choice for structures with padding or pointer members.
 
-`adt_MinBy`, `adt_MaxBy`, and `adt_SortBy` accept a per-call comparator without changing the type information stored by the container.
+`adt_MinBy`, `adt_MaxBy`, `adt_SortBy`, `adt_isSortedBy`, and the container-specific `BinarySearchBy` functions accept a per-call comparator without changing the type information stored by the container.
+
+Binary search is available only for contiguous dynamic arrays and stacks. Sortedness checks work with every ADT.
+
+Use the default pair for the configured comparator. For overrides, pass the same function to `adt_isSortedBy` and `BinarySearchBy`.
 
 See [sorting](sorting.md) for the algorithm choices, comparator overrides, and temporary-buffer behavior.
 

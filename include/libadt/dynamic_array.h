@@ -255,6 +255,39 @@ bool da_Remove(DynamicArray_t *array, size_t index);
 #define dynamicArray_Take da_Take
 bool da_Take(DynamicArray_t *array, size_t index, void *outElement);
 
+/* --- da_BinarySearch / dynamicArray_BinarySearch ------------------------- */
+
+/**
+ * @brief Finds the first matching element in a sorted array.
+ *
+ * The array must already be ordered by its configured comparator.
+ * Use adt_isSorted when the current ordering is uncertain.
+ *
+ * @param array Sorted array to search.
+ * @param target Element value to find.
+ * @param[out] outIndex Index of the first matching element when found.
+ * @return true when a match is found; otherwise false.
+ */
+#define dynamicArray_BinarySearch da_BinarySearch
+bool da_BinarySearch(const DynamicArray_t *array, const void *target, size_t *outIndex);
+
+/* --- da_BinarySearchBy / dynamicArray_BinarySearchBy --------------------- */
+
+/**
+ * @brief Finds the first matching element in an array sorted by a comparator.
+ *
+ * The array must already be ordered by @p compare.
+ * Use adt_isSortedBy with the same comparator when the ordering is uncertain.
+ *
+ * @param array Sorted array to search.
+ * @param compare Comparator defining the array order.
+ * @param target Element value to find.
+ * @param[out] outIndex Index of the first matching element when found.
+ * @return true when a match is found; otherwise false.
+ */
+#define dynamicArray_BinarySearchBy da_BinarySearchBy
+bool da_BinarySearchBy(const DynamicArray_t *array, CompareFn_t compare, const void *target, size_t *outIndex);
+
 /* --- da_Clear / dynamicArray_Clear --------------------------------------- */
 
 /**

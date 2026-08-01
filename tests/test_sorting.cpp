@@ -349,3 +349,63 @@ TEST(Sorting, PreservesResourceOwnershipWhileReordering)
     ll_Destroy(&list);
     UNSIGNED_LONGS_EQUAL(3, destroyCount);
 }
+
+TEST(Sorting, IsSortedWorksAcrossContiguousAndLinkedContainers)
+{
+    int sortedValues[] = {1, 2, 2, 4, 8};
+    int unsortedValues[] = {1, 3, 2, 4};
+    ADT_ElementTypeInfo_t type = {sizeof(int), CompareInt, PrintInt, ToNumberInt, NULL};
+    DynamicArray_t array = {};
+    LinkedList_t list = {};
+
+    CHECK_TRUE(da_InitFrom(&array, sortedValues, 5, type));
+    CHECK_TRUE(ll_InitFrom(&list, unsortedValues, 4, type));
+    CHECK_TRUE(adt_isSorted(&array));
+    CHECK_FALSE(adt_isSorted(&list));
+
+    da_Destroy(&array);
+    ll_Destroy(&list);
+}
+
+TEST(Sorting, IsSortedByUsesComparatorOverride)
+{
+    int values[] = {5, 4, 4, 2, 1};
+    ADT_ElementTypeInfo_t type = {sizeof(int), NULL, PrintInt, ToNumberInt, NULL};
+    DynamicArray_t array = {};
+
+    CHECK_TRUE(da_InitFrom(&array, values, 5, type));
+    CHECK_FALSE(adt_isSorted(&array));
+    CHECK_TRUE(adt_isSortedBy(&array, CompareIntDescendingForSort));
+
+    da_Destroy(&array);
+}
+
+TEST(Sorting, IsSortedAcceptsEmptyAndSingleElementContainers)
+{
+    int value = 7;
+    ADT_ElementTypeInfo_t type = {sizeof(int), CompareInt, PrintInt, ToNumberInt, NULL};
+    DynamicArray_t array = {};
+    LinkedList_t list = {};
+
+    CHECK_TRUE(da_Init(&array, type));
+    CHECK_TRUE(ll_InitFrom(&list, &value, 1, type));
+    CHECK_TRUE(adt_isSorted(&array));
+    CHECK_TRUE(adt_isSorted(&list));
+
+    da_Destroy(&array);
+    ll_Destroy(&list);
+}
+
+TEST(Sorting, IsSortedRejectsInvalidArguments)
+{
+    int values[] = {1, 2};
+    ADT_ElementTypeInfo_t type = {sizeof(int), CompareInt, PrintInt, ToNumberInt, NULL};
+    DynamicArray_t array = {};
+
+    CHECK_TRUE(da_InitFrom(&array, values, 2, type));
+    CHECK_FALSE(adt_isSorted(NULL));
+    CHECK_FALSE(adt_isSortedBy(NULL, CompareInt));
+    CHECK_FALSE(adt_isSortedBy(&array, NULL));
+
+    da_Destroy(&array);
+}

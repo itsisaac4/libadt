@@ -359,6 +359,27 @@ bool adt_Sort(ADT_t *adt, ADT_SortAlgorithm_t algorithm);
 #define abstractDataType_SortBy adt_SortBy
 bool adt_SortBy(ADT_t *adt, ADT_SortAlgorithm_t algorithm, CompareFn_t compare);
 
+/* --- adt_isSorted / abstractDataType_isSorted ---------------------------- */
+
+/**
+ * @brief Checks whether a container is ordered by its configured comparator.
+ * @param adt Initialized container.
+ * @return true when the container is sorted; otherwise false.
+ */
+#define abstractDataType_isSorted adt_isSorted
+bool adt_isSorted(const ADT_t *adt);
+
+/* --- adt_isSortedBy / abstractDataType_isSortedBy ------------------------ */
+
+/**
+ * @brief Checks whether a container is ordered by a comparator override.
+ * @param adt Initialized container.
+ * @param compare Comparator defining the expected order.
+ * @return true when the container is sorted; otherwise false.
+ */
+#define abstractDataType_isSortedBy adt_isSortedBy
+bool adt_isSortedBy(const ADT_t *adt, CompareFn_t compare);
+
 #ifdef __cplusplus
 }
 #endif

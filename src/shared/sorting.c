@@ -10,6 +10,15 @@ typedef struct
     size_t stride;
 } SortBufferContext_t;
 
+typedef struct
+{
+    unsigned char *previous;
+    size_t stride;
+    CompareFn_t compare;
+    bool hasPrevious;
+    bool sorted;
+} IsSortedContext_t;
+
 typedef bool (*SortBufferFn_t)(unsigned char *buffer, size_t count, size_t elementSize, CompareFn_t compare, void *tmp);
 
 static void CopyToBuffer(const void *element, size_t index, void *context)
@@ -22,6 +31,26 @@ static void CopyFromBuffer(void *element, size_t index, void *context)
 {
     SortBufferContext_t *sort = (SortBufferContext_t *)context;
     memcpy(element, sort->buffer + index * sort->stride, sort->stride);
+}
+
+static void CheckNextElement(const void *element, size_t index, void *context)
+{
+    (void)index;
+    IsSortedContext_t *check = (IsSortedContext_t *)context;
+
+    if (!check->sorted)
+    {
+        return;
+    }
+
+    if (check->hasPrevious && check->compare(check->previous, element) > 0)
+    {
+        check->sorted = false;
+        return;
+    }
+
+    memcpy(check->previous, element, check->stride);
+    check->hasPrevious = true;
 }
 
 static unsigned char *BufferElement(unsigned char *buffer, size_t index, size_t elementSize)
@@ -349,4 +378,53 @@ bool adt_Sort(ADT_t *adt, ADT_SortAlgorithm_t algorithm)
     }
 
     return adt_SortBy(adt, algorithm, super->_private.elementType.compare);
+}
+
+bool adt_isSorted(const ADT_t *adt)
+{
+    const ADT_Super_t *super = (const ADT_Super_t *)adt;
+
+    if (super == NULL)
+    {
+        return false;
+    }
+
+    return adt_isSortedBy(adt, super->_private.elementType.compare);
+}
+
+bool adt_isSortedBy(const ADT_t *adt, CompareFn_t compare)
+{
+    const ADT_Super_t *super = (const ADT_Super_t *)adt;
+
+    if (super == NULL ||
+        super->_private.vtable == NULL ||
+        super->_private.vtable->visit == NULL ||
+        super->_private.elementType.elementSize == 0 ||
+        compare == NULL)
+    {
+        return false;
+    }
+
+    if (super->_private.size < 2)
+    {
+        return true;
+    }
+
+    unsigned char *previous = malloc(super->_private.elementType.elementSize);
+
+    if (previous == NULL)
+    {
+        return false;
+    }
+
+    IsSortedContext_t context = {
+        .previous = previous,
+        .stride = super->_private.elementType.elementSize,
+        .compare = compare,
+        .hasPrevious = false,
+        .sorted = true};
+
+    bool traversed = adt_ForEach(adt, CheckNextElement, &context);
+    free(previous);
+    return traversed && context.sorted;
 }

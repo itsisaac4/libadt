@@ -38,7 +38,7 @@ Use `DA_INIT(&array, type)` for an empty primitive array and `DA_INIT_FROM(&arra
 | --- | --- |
 | Initialization | `da_Init`, `da_InitFrom`, `DA_INIT`, `DA_INIT_FROM` |
 | Access | `da_Get`, `da_Set` |
-| Search | `da_IndexOf`, `da_Contains` |
+| Search | `da_IndexOf`, `da_Contains`, `da_BinarySearch`, `da_BinarySearchBy` |
 | Insertion | `da_Insert`, `da_Prepend`, `da_Append` |
 | Removal | `da_Remove`, `da_Take`, `da_Clear`, `da_Destroy` |
 | Shared | `adt_Size`, `adt_IsEmpty`, `adt_Print`, statistics, `adt_Sort` |
@@ -47,7 +47,31 @@ Each operation supports any type matching the array's initialized element type. 
 
 ## Search and Replacement
 
-`da_IndexOf` writes the first matching index to its output parameter, while `da_Contains` reports only whether a match exists. Both use the configured comparator when one is available and otherwise compare the stored bytes. A comparator is the safer definition of equality for custom structures with padding or pointer members.
+`da_IndexOf` writes the first matching index. `da_Contains` reports only whether a match exists.
+
+Both use the configured comparator when available and otherwise compare bytes. Comparators are safer for structures with padding or pointer members.
+
+Dynamic arrays provide binary search because they use `ContiguousStorage_t`. Linked-storage ADTs do not provide it.
+
+`da_BinarySearch` uses the configured comparator. `da_BinarySearchBy` uses a comparator override.
+
+The array must already use the same ordering. A mismatched order has no defined result.
+
+Both forms return the first duplicate match. A failed search leaves `outIndex` unchanged.
+
+When the current order is uncertain, call the shared O(n) check before searching. The default functions both use the comparator supplied at initialization:
+
+```c
+int target = 40;
+size_t index = 0;
+if (adt_isSorted(&numbers) &&
+    da_BinarySearch(&numbers, &target, &index))
+{
+    UseIndex(index);
+}
+```
+
+If the array was ordered by an override comparator, use that exact comparator with both `adt_isSortedBy` and `da_BinarySearchBy`. The O(n) check is optional when the caller already knows the array's current ordering.
 
 `da_Set` releases resources owned by the element being replaced and then stores a shallow copy of the replacement. After a successful call, the stored copy assumes responsibility for resources described by the descriptor's `destroy` callback.
 
@@ -114,7 +138,8 @@ The append copies the structure, not resources referenced by its fields. See [cu
 | Get or set by index | O(1) |
 | Append | Amortized O(1) |
 | Prepend or indexed insertion | O(n) |
-| Search | O(n) |
+| `IndexOf` or `Contains` | O(n) |
+| Binary search | O(log n) |
 | Remove | O(n) |
 | Clear or destroy | O(n) |
 

@@ -1,6 +1,8 @@
 # libadt
 
-libadt is a C23 abstract data type library created for my CS3003 Programming Languages final project. It provides dynamic arrays, doubly linked lists, stacks, and queues with shared algorithms. Under the API, it uses type erasure, compile-time generic dispatch, runtime polymorphism, composition, and explicit memory ownership.
+libadt is a C23 abstract data type library created for my CS3003 Programming Languages final project. It provides dynamic arrays, doubly linked lists, stacks, and queues with shared algorithms.
+
+Under the API, it uses type erasure, compile-time generic dispatch, runtime polymorphism, composition, and explicit memory ownership.
 
 - **Author:** Isaac Niedens
 - **Course:** CS3003 — Programming Languages
@@ -53,17 +55,19 @@ Include the complete supported API with one header:
 #include "libadt/libadt.h"
 ```
 
-The individual container headers remain available when a program wants smaller, selective includes. When using selective includes, include `libadt/abstract_data_type.h` explicitly for the shared `ADT_t` functionality, then include the headers for the concrete containers the program uses. The shared header provides traversal, size and element-type inspection, printing and debug output, extrema, numeric statistics, and sorting for every initialized libadt container.
+Individual container headers are available for selective includes. Include `libadt/abstract_data_type.h` for shared `ADT_t` functionality, followed by the required concrete container headers.
+
+The shared header provides traversal, inspection, printing, extrema, statistics, sorting, and sortedness checks.
 
 ### ADT Interfaces
 
 | ADT | Backing Representation | Main Operations | Best Fit |
 | --- | --- | --- | --- |
-| `DynamicArray_t` | `ContiguousStorage_t`: resizable contiguous allocation | `da_Get`, `da_Set`, `da_Insert`, `da_Append`, `da_Take` | Indexed access and cache-friendly sequences |
+| `DynamicArray_t` | `ContiguousStorage_t`: resizable contiguous allocation | `da_Get`, `da_Set`, `da_Insert`, `da_Append`, `da_Take`, `da_BinarySearch` | Indexed access and cache-friendly sequences |
 | `LinkedList_t` | `LinkedStorage_t`: doubly linked nodes | `ll_Get`, `ll_Insert`, `ll_Prepend`, `ll_Append`, `ll_Take` | Frequent insertion without shifting elements |
-| `Stack_t` | `ContiguousStorage_t`: resizable contiguous allocation | `st_Push`, `st_Peek`, `st_Pop`, `st_Discard` | Last-in, first-out behavior |
+| `Stack_t` | `ContiguousStorage_t`: resizable contiguous allocation | `st_Push`, `st_Peek`, `st_Pop`, `st_Discard`, `st_BinarySearch` | Last-in, first-out behavior |
 | `Queue_t` | `LinkedStorage_t`: doubly linked nodes | `qu_Enqueue`, `qu_Front`, `qu_Back`, `qu_Dequeue` | First-in, first-out behavior |
-| `ADT_t` | No storage of its own; operates through `ADT_Super_t` and the concrete container's vtable | `adt_ForEach`, `adt_ForEachMutable`, `adt_Size`, `adt_IsEmpty`, `adt_ElementType`, `adt_Print`, `adt_PrintDebug`, `adt_Min`, `adt_Max`, `adt_Mean`, `adt_Median`, `adt_Mode`, `adt_Sort`<br><br>`adt_MinBy`, `adt_MaxBy`, `adt_MeanBy`, `adt_MedianBy`, `adt_ModeBy`, `adt_SortBy` — these functions take a callback override to define custom behavior | Shared operations across every concrete ADT; primitive callbacks are automatic, while custom types supply them through `ADT_ElementTypeInfo_t` |
+| `ADT_t` | No storage of its own; operates through `ADT_Super_t` and the concrete container's vtable | `adt_ForEach`, `adt_ForEachMutable`, `adt_Size`, `adt_IsEmpty`, `adt_ElementType`, `adt_Print`, `adt_PrintDebug`, `adt_Min`, `adt_Max`, `adt_Mean`, `adt_Median`, `adt_Mode`, `adt_Sort`, `adt_isSorted`<br><br>`adt_MinBy`, `adt_MaxBy`, `adt_MeanBy`, `adt_MedianBy`, `adt_ModeBy`, `adt_SortBy`, `adt_isSortedBy` — these functions take a callback override to define custom behavior | Shared operations across every concrete ADT; primitive callbacks are automatic, while custom types supply them through `ADT_ElementTypeInfo_t` |
 
 Some ADTs share the same storage component. Dynamic arrays and stacks use `ContiguousStorage_t`, while linked lists and queues use `LinkedStorage_t`. They remain different ADTs because they expose different operations and use that storage differently.
 
@@ -115,6 +119,7 @@ adt_Mean(&container, &mean);
 adt_Median(&container, &median);
 adt_Mode(&container, &mode);
 adt_Sort(&container, algorithm);
+bool sorted = adt_isSorted(&container);
 // algorithm can be:
 //     ADT_SORT_BUBBLE, ADT_SORT_SELECTION, ADT_SORT_INSERTION,
 //     ADT_SORT_QUICK, or ADT_SORT_BOGO
@@ -122,7 +127,15 @@ adt_Sort(&container, algorithm);
 
 These shared functions use dynamic dispatch through the container's traversal vtable.
 
-The library includes bubble, selection, insertion, quick, and bogo sort. I included bogo sort as an intentionally impractical demonstration of the shared sorting interface. The algorithm names are defined by the `ADT_SortAlgorithm_t` enum in `include/libadt/abstract_data_type.h`. Adding another algorithm requires adding an enum value and implementing its dispatch in `src/shared/sorting.c`; `adt_SortBy` supplies a custom comparator for an existing algorithm rather than a new sorting algorithm.
+The library includes bubble, selection, insertion, quick, and bogo sort. Bogo sort is an intentionally impractical demonstration.
+
+Algorithm names come from `ADT_SortAlgorithm_t`. `adt_SortBy` changes the comparator for one call; it does not select a new algorithm.
+
+### Sortedness and Binary Search
+
+`adt_isSorted` and `adt_isSortedBy` are O(n) checks available for every ADT. Binary search is available only for the contiguous dynamic-array and stack representations and requires the container to be sorted by the same comparator used for the search.
+
+The default sortedness and binary-search functions use the comparator supplied at initialization. When using the `By` forms, pass the same override comparator to both. Check sortedness first only when the current ordering is uncertain; see [Sorting](docs/sorting.md#checking-existing-order) for examples and details.
 
 ### Runtime Element Type Information
 
@@ -131,14 +144,18 @@ After type erasure, `ADT_ElementTypeInfo_t` acts as the runtime element descript
 | Member | Type | Purpose |
 | --- | --- | --- |
 | `elementSize` | `size_t` | Controls allocation and byte copying. Used by initialization, storage, and element-copying operations. |
-| `compare` | `CompareFn_t` : `int (*)(const void *, const void *)` | Defines equality and ordering. Used by `*_IndexOf`, `*_Contains`, `adt_Min`, `adt_Max`, and `adt_Sort`. |
+| `compare` | `CompareFn_t` : `int (*)(const void *, const void *)` | Defines equality and ordering. Used by search, extrema, sorting, and sortedness checks. |
 | `print` | `PrintFn_t` : `void (*)(const void *)` | Prints one element. Used by `adt_Print` and `adt_PrintDebug`. |
 | `toNumber` | `ToNumberFn_t` : `double (*)(const void *)` | Converts one element to `double`. Used by `adt_Mean`, `adt_Median`, and `adt_Mode`. |
 | `destroy` | `DestroyFn_t` : `void (*)(void *)` | Releases element-owned resources. Used by `*_Set`, `*_Remove`, `*_Discard`, `*_Clear`, and `*_Destroy`. |
 
 Initialization macros automatically configure these callbacks for `char`, `int`, `unsigned int`, `long`, `float`, and `double`. Custom types provide their own callbacks when needed.
 
-`elementSize` is required; the callbacks may be `NULL` when their behavior is not needed. If `compare` or `toNumber` is missing, a shared operation that requires it returns `false`; the corresponding `adt_*By` function can instead use a comparator or numeric projection supplied for that call without changing the descriptor. `adt_Print` returns `false` without `print`, while a `NULL` `destroy` callback skips element-specific cleanup.
+`elementSize` is required. Callbacks may be `NULL` when their behavior is not needed.
+
+An operation returns `false` when its required callback is missing. The matching `adt_*By` function can provide a per-call override.
+
+`adt_Print` requires `print`. A `NULL` `destroy` callback skips element-specific cleanup.
 
 ### Explicit Ownership and Safety
 
@@ -247,9 +264,11 @@ ___
 
 ## Project Summary
 
-For this project, I built a generic abstract data type library with dynamic arrays, doubly linked lists, stacks, and queues, written specifically in C23. They support primitive and custom element types and share printing, sorting, extrema, and numeric statistics.
+For this project, I built a generic abstract data type library with dynamic arrays, doubly linked lists, stacks, and queues, written in C, specifically for C23. They support primitive and custom element types and share printing, sorting, extrema, and numeric statistics.
 
-I wanted the project to go beyond four separate container implementations. The interesting part was figuring out how I could implement not only principles of imperative programming but also principles of object-oriented programming in a non-OOP language. This revolved around how far I could take inheritance, polymorphism, encapsulation, and generic type-agnostic programming in C.
+I wanted the project to go beyond four separate container implementations. The main challenge was applying object-oriented ideas in a non-OOP language.
+
+This explored inheritance, polymorphism, encapsulation, and type-agnostic programming in C.
 
 ## Connections to Course Concepts
 
@@ -268,7 +287,9 @@ I wanted the project to go beyond four separate container implementations. The i
 
 ## How the Design Changed and What I Learned
 
-The project started with a dynamic array and direct `void *` operations. As I added more containers, I had to separate element dispatch, shared behavior, storage reuse, and resource ownership instead of treating them as one generic container problem. This naturally led to a more object-oriented design involving polymorphism and an inheritance-like shared layout.
+The project started with a dynamic array and direct `void *` operations. More containers required separate designs for dispatch, shared behavior, storage reuse, and ownership.
+
+That separation led to runtime polymorphism and an inheritance-like shared layout.
 
 ### `_Generic`: Clean Calls Without Separate APIs
 
@@ -317,7 +338,9 @@ Once the concrete element type becomes `void *`, `sizeof(type)` is not enough. T
 - a numeric projection for statistics
 - a destructor for element-owned resources
 
-This also exposed an ownership question I had not needed to think about with plain integers. Copying a structure does not duplicate the memory referenced by its pointer fields. The API now separates destructive removal from ownership transfer, and the documentation states who owns a resource after each call.
+This also exposed an ownership issue hidden by plain integers: copying a structure does not copy resources referenced by its pointers.
+
+The API therefore separates destructive removal from ownership transfer.
 
 ### Composition Below the Public ADTs
 
@@ -327,6 +350,10 @@ I first considered implementing stack and queue as wrappers around the dynamic a
 - `LinkedStorage_t` manages elements connected through linked nodes.
 
 Both provide type-erased storage without defining container behavior.
+
+I implemented binary search in `ContiguousStorage_t`, so dynamic arrays and stacks can reuse it. Linked storage does not expose binary search because reaching each midpoint would require traversal.
+
+This composition keeps representation-specific behavior reusable without adding unsuitable operations to every public ADT.
 
 Stacks use contiguous storage because `Push` and `Pop` operate efficiently at the end and benefit from cache locality. Queues use linked storage so `Enqueue` at the tail and `Dequeue` at the head do not require shifting the remaining elements.
 
@@ -352,7 +379,9 @@ make test
 make sanitize
 ```
 
-These checks supported a red-green-refactor workflow: I added a failing test, implemented the behavior until the test passed, and then improved the design while keeping the tests green. This let me verify each component before building new implementations and abstractions on top of it instead of carrying earlier defects into later layers of the library.
+These checks supported a red-green-refactor workflow. I added a failing test, implemented the behavior, and improved the design while keeping tests green.
+
+This verified each component before new abstractions were built on top of it.
 
 ## Limitations and Future Work
 

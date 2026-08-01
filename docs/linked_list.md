@@ -47,7 +47,9 @@ Each operation supports any type matching the list's initialized element type. P
 
 ## Search and Replacement
 
-`ll_IndexOf` writes the first matching index to its output parameter, while `ll_Contains` reports only whether a match exists. Both use the configured comparator when one is available and otherwise compare the stored bytes. A comparator is the safer definition of equality for custom structures with padding or pointer members.
+`ll_IndexOf` writes the first matching index. `ll_Contains` reports only whether a match exists.
+
+Both use the configured comparator when available and otherwise compare bytes. Comparators are safer for structures with padding or pointer members.
 
 `ll_Set` releases resources owned by the element being replaced and then stores a shallow copy of the replacement. After a successful call, the stored copy assumes responsibility for resources described by the descriptor's `destroy` callback.
 

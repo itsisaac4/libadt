@@ -31,6 +31,11 @@ static ADT_ElementTypeInfo_t StackIntType()
         NULL};
 }
 
+static int CompareIntDescendingForStack(const void *first, const void *second)
+{
+    return CompareInt(second, first);
+}
+
 static char *CopyStackString(const char *text)
 {
     const size_t size = strlen(text) + 1;
@@ -225,6 +230,50 @@ TEST(Stack, SharedStatisticsAndSortingUseBottomToTopTraversal)
     int top = 0;
     CHECK_TRUE(st_Peek(&stack, &top));
     LONGS_EQUAL(4, top);
+}
+
+TEST(Stack, BinarySearchUsesBottomBasedIndexesAndFindsFirstDuplicate)
+{
+    int values[] = {1, 2, 2, 4, 8};
+    CHECK_TRUE(st_InitFrom(&stack, values, 5, StackIntType()));
+
+    int target = 2;
+    size_t index = 99;
+    CHECK_TRUE(st_BinarySearch(&stack, &target, &index));
+    UNSIGNED_LONGS_EQUAL(1, index);
+}
+
+TEST(Stack, BinarySearchBySupportsDescendingBottomToTopOrder)
+{
+    int values[] = {9, 7, 5, 3, 1};
+    ADT_ElementTypeInfo_t type = StackIntType();
+    type.compare = NULL;
+    CHECK_TRUE(st_InitFrom(&stack, values, 5, type));
+
+    int target = 3;
+    size_t index = 99;
+    CHECK_FALSE(st_BinarySearch(&stack, &target, &index));
+    CHECK_TRUE(st_BinarySearchBy(
+        &stack,
+        CompareIntDescendingForStack,
+        &target,
+        &index));
+    UNSIGNED_LONGS_EQUAL(3, index);
+}
+
+TEST(Stack, BinarySearchReportsMissingValuesAndRejectsInvalidArguments)
+{
+    int values[] = {1, 3, 5};
+    CHECK_TRUE(st_InitFrom(&stack, values, 3, StackIntType()));
+
+    int target = 4;
+    size_t index = 99;
+    CHECK_FALSE(st_BinarySearch(&stack, &target, &index));
+    CHECK_FALSE(st_BinarySearch(NULL, &target, &index));
+    CHECK_FALSE(st_BinarySearch(&stack, NULL, &index));
+    CHECK_FALSE(st_BinarySearch(&stack, &target, NULL));
+    CHECK_FALSE(st_BinarySearchBy(&stack, NULL, &target, &index));
+    UNSIGNED_LONGS_EQUAL(99, index);
 }
 
 TEST(Stack, DestroyResetsStateAndSupportsRepeatedCalls)

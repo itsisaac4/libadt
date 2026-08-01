@@ -267,6 +267,44 @@ bool da_Take(DynamicArray_t *array, size_t index, void *outElement)
     return true;
 }
 
+bool da_BinarySearch(const DynamicArray_t *array, const void *target, size_t *outIndex)
+{
+    if (array == NULL ||
+        target == NULL ||
+        outIndex == NULL ||
+        array->super._private.elementType.compare == NULL)
+    {
+        return false;
+    }
+
+    return contiguousStorage_BinarySearchBy(
+        &array->_private.storage,
+        array->super._private.size,
+        array->super._private.elementType.elementSize,
+        array->super._private.elementType.compare,
+        target,
+        outIndex);
+}
+
+bool da_BinarySearchBy(const DynamicArray_t *array, CompareFn_t compare, const void *target, size_t *outIndex)
+{
+    if (array == NULL ||
+        compare == NULL ||
+        target == NULL ||
+        outIndex == NULL)
+    {
+        return false;
+    }
+
+    return contiguousStorage_BinarySearchBy(
+        &array->_private.storage,
+        array->super._private.size,
+        array->super._private.elementType.elementSize,
+        compare,
+        target,
+        outIndex);
+}
+
 void da_Clear(DynamicArray_t *array)
 {
     if (array == NULL)

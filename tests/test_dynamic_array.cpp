@@ -31,6 +31,11 @@ static ADT_ElementTypeInfo_t DoubleTypeInfo()
     return info;
 }
 
+static int CompareIntDescendingForArray(const void *first, const void *second)
+{
+    return CompareInt(second, first);
+}
+
 static ADT_ElementTypeInfo_t InvalidTypeInfo()
 {
     ADT_ElementTypeInfo_t info = {0, NULL, NULL, NULL, NULL};
@@ -1582,4 +1587,63 @@ TEST(DynamicArrayPrinting, SharedDebugPrintUsesConfiguredPrinterForEveryElement)
 
     LONGS_EQUAL(3, printCallCount);
     LONGS_EQUAL(10, printedTotal);
+}
+
+TEST_GROUP(DynamicArrayBinarySearch)
+{
+    DynamicArray_t array;
+
+    void setup()
+    {
+        array = DynamicArray_t{};
+    }
+
+    void teardown()
+    {
+        da_Destroy(&array);
+    }
+};
+
+TEST(DynamicArrayBinarySearch, FindsFirstDuplicateWithConfiguredComparator)
+{
+    int values[] = {1, 2, 2, 2, 5, 8};
+    CHECK_TRUE(da_InitFrom(&array, values, 6, IntTypeInfo()));
+
+    int target = 2;
+    size_t index = 99;
+    CHECK_TRUE(da_BinarySearch(&array, &target, &index));
+    UNSIGNED_LONGS_EQUAL(1, index);
+}
+
+TEST(DynamicArrayBinarySearch, ComparatorOverrideSupportsDifferentOrdering)
+{
+    int values[] = {9, 7, 5, 3, 1};
+    ADT_ElementTypeInfo_t type = IntTypeInfo();
+    type.compare = NULL;
+    CHECK_TRUE(da_InitFrom(&array, values, 5, type));
+
+    int target = 3;
+    size_t index = 99;
+    CHECK_FALSE(da_BinarySearch(&array, &target, &index));
+    CHECK_TRUE(da_BinarySearchBy(
+        &array,
+        CompareIntDescendingForArray,
+        &target,
+        &index));
+    UNSIGNED_LONGS_EQUAL(3, index);
+}
+
+TEST(DynamicArrayBinarySearch, ReportsMissingValuesAndRejectsInvalidArguments)
+{
+    int values[] = {1, 3, 5};
+    CHECK_TRUE(da_InitFrom(&array, values, 3, IntTypeInfo()));
+
+    int target = 4;
+    size_t index = 99;
+    CHECK_FALSE(da_BinarySearch(&array, &target, &index));
+    CHECK_FALSE(da_BinarySearch(NULL, &target, &index));
+    CHECK_FALSE(da_BinarySearch(&array, NULL, &index));
+    CHECK_FALSE(da_BinarySearch(&array, &target, NULL));
+    CHECK_FALSE(da_BinarySearchBy(&array, NULL, &target, &index));
+    UNSIGNED_LONGS_EQUAL(99, index);
 }

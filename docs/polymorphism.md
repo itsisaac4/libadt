@@ -83,6 +83,7 @@ The call to `ProcessContainer` is the same for all four types. At runtime, dynam
 | `adt_Min`, `adt_Max` | Read-only traversal and a comparator |
 | `adt_Mean`, `adt_Median`, `adt_Mode` | Read-only traversal and a numeric conversion |
 | `adt_Sort` | Read-only traversal, mutable traversal, and a comparator |
+| `adt_isSorted` | Read-only traversal and a comparator |
 
 Sorting is the clearest tradeoff in this design:
 
@@ -96,7 +97,9 @@ See [sorting](sorting.md) for the available algorithms and the consequences of t
 
 ## What Stays Container-Specific
 
-The vtable is deliberately small. A stack has `st_Push` and `st_Pop`; a queue has `qu_Enqueue` and `qu_Dequeue`. Those operations do not make sense for every ADT, so putting them in the shared base would make the abstraction less honest, not more polymorphic.
+The vtable is deliberately small. Stack and queue endpoint operations remain container-specific.
+
+Putting them in the shared base would weaken the abstraction.
 
 The same rule applies to primitive wrappers. Each concrete ADT defines the element operations it actually supports.
 

@@ -6,6 +6,11 @@ extern "C"
 #include "CppUTest/TestHarness.h"
 #include <cstdint>
 
+static int CompareIntDescendingForStorage(const void *first, const void *second)
+{
+    return CompareInt(second, first);
+}
+
 TEST_GROUP(ContiguousStorage)
 {
     ContiguousStorage_t storage;
@@ -221,6 +226,100 @@ TEST(ContiguousStorage, ContainsAddressChecksAllocatedBuffer)
         &outside,
         sizeof(int)));
     CHECK_FALSE(contiguousStorage_ContainsAddress(NULL, first, sizeof(int)));
+}
+
+TEST(ContiguousStorage, BinarySearchFindsFirstMatchingElement)
+{
+    int values[] = {1, 2, 2, 2, 4, 7};
+    CHECK_TRUE(contiguousStorage_InitFrom(&storage, values, 6, sizeof(int)));
+
+    int target = 2;
+    size_t index = 99;
+    CHECK_TRUE(contiguousStorage_BinarySearchBy(
+        &storage,
+        6,
+        sizeof(int),
+        CompareInt,
+        &target,
+        &index));
+    UNSIGNED_LONGS_EQUAL(1, index);
+
+    target = 1;
+    CHECK_TRUE(contiguousStorage_BinarySearchBy(
+        &storage,
+        6,
+        sizeof(int),
+        CompareInt,
+        &target,
+        &index));
+    UNSIGNED_LONGS_EQUAL(0, index);
+
+    target = 7;
+    CHECK_TRUE(contiguousStorage_BinarySearchBy(
+        &storage,
+        6,
+        sizeof(int),
+        CompareInt,
+        &target,
+        &index));
+    UNSIGNED_LONGS_EQUAL(5, index);
+}
+
+TEST(ContiguousStorage, BinarySearchUsesComparatorDefinedOrder)
+{
+    int values[] = {9, 7, 5, 3, 1};
+    CHECK_TRUE(contiguousStorage_InitFrom(&storage, values, 5, sizeof(int)));
+
+    int target = 3;
+    size_t index = 99;
+    CHECK_TRUE(contiguousStorage_BinarySearchBy(
+        &storage,
+        5,
+        sizeof(int),
+        CompareIntDescendingForStorage,
+        &target,
+        &index));
+    UNSIGNED_LONGS_EQUAL(3, index);
+}
+
+TEST(ContiguousStorage, BinarySearchLeavesIndexUnchangedWhenNotFound)
+{
+    int values[] = {1, 3, 5};
+    CHECK_TRUE(contiguousStorage_InitFrom(&storage, values, 3, sizeof(int)));
+
+    int target = 4;
+    size_t index = 99;
+    CHECK_FALSE(contiguousStorage_BinarySearchBy(
+        &storage,
+        3,
+        sizeof(int),
+        CompareInt,
+        &target,
+        &index));
+    UNSIGNED_LONGS_EQUAL(99, index);
+}
+
+TEST(ContiguousStorage, BinarySearchHandlesEmptyStorageAndInvalidArguments)
+{
+    int target = 1;
+    size_t index = 99;
+    CHECK_TRUE(contiguousStorage_InitFrom(&storage, NULL, 0, sizeof(int)));
+
+    CHECK_FALSE(contiguousStorage_BinarySearchBy(
+        &storage, 0, sizeof(int), CompareInt, &target, &index));
+    CHECK_FALSE(contiguousStorage_BinarySearchBy(
+        NULL, 0, sizeof(int), CompareInt, &target, &index));
+    CHECK_FALSE(contiguousStorage_BinarySearchBy(
+        &storage, 0, 0, CompareInt, &target, &index));
+    CHECK_FALSE(contiguousStorage_BinarySearchBy(
+        &storage, 0, sizeof(int), NULL, &target, &index));
+    CHECK_FALSE(contiguousStorage_BinarySearchBy(
+        &storage, 0, sizeof(int), CompareInt, NULL, &index));
+    CHECK_FALSE(contiguousStorage_BinarySearchBy(
+        &storage, 0, sizeof(int), CompareInt, &target, NULL));
+    CHECK_FALSE(contiguousStorage_BinarySearchBy(
+        &storage, 1, sizeof(int), CompareInt, &target, &index));
+    UNSIGNED_LONGS_EQUAL(99, index);
 }
 
 TEST(ContiguousStorage, DestroyResetsStorage)

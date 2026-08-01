@@ -136,7 +136,9 @@ qu_Enqueue(&numberQueue, 42);
 
 The supported primitive types are `char`, `int`, `unsigned int`, `long`, `float`, and `double`. Value dispatch uses C23 `_Generic`.
 
-Macros such as `da_Append` and `st_Push` are the common entry points. For a supported primitive, `_Generic` selects a value wrapper that receives the value naturally and forwards its address to the implementation. The default association uses the reference-based path for custom structures, pointers, function pointers, and other element types, so the public operation name stays the same in both cases.
+Macros such as `da_Append` and `st_Push` are the common entry points. For primitives, `_Generic` selects a value wrapper.
+
+Custom structures, pointers, and function pointers use the reference path. Both paths keep the same public operation name.
 
 Pass the address of custom structures, pointer elements, function pointers, and other types:
 
@@ -159,11 +161,18 @@ adt_Mean(&numbers, &mean);
 adt_Median(&numbers, &median);
 adt_Mode(&numbers, &mode);
 adt_Sort(&numbers, ADT_SORT_INSERTION);
+bool sorted = adt_isSorted(&numbers);
 ```
 
 These functions use the container's traversal vtable and element callbacks. See [runtime element type information](runtime_type_info.md) and [polymorphism](polymorphism.md) for the implementation.
 
-The default extrema and sorting operations use the descriptor's `compare` callback, while the default statistics operations use `toNumber`. Their `adt_*By` variants accept a callback for one call without modifying the descriptor, which lets the same custom type be ordered or projected in more than one way.
+Default extrema, sorting, and sortedness use `compare`. Default statistics use `toNumber`.
+
+The `adt_*By` variants override a callback for one call without modifying the descriptor.
+
+The O(n) sortedness checks work with every ADT. Binary search is limited to contiguous dynamic arrays and stacks.
+
+Binary search requires the same comparator that defines the current order. When unsure, pair the default functions or pass one comparator to both `By` functions.
 
 ## Next Steps
 

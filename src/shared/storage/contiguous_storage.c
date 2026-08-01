@@ -231,6 +231,55 @@ bool contiguousStorage_ContainsAddress(const ContiguousStorage_t *storage, const
     return inspectedAddress >= storageAddress && inspectedAddress - storageAddress < storageSize;
 }
 
+bool contiguousStorage_BinarySearchBy(const ContiguousStorage_t *storage, size_t count, size_t elementSize, CompareFn_t compare, const void *target, size_t *outIndex)
+{
+    if (storage == NULL ||
+        elementSize == 0 ||
+        compare == NULL ||
+        target == NULL ||
+        outIndex == NULL ||
+        (storage->data == NULL && storage->capacity != 0) ||
+        (storage->data != NULL && storage->capacity == 0) ||
+        storage->capacity > SIZE_MAX / elementSize ||
+        count > storage->capacity ||
+        (count > 0 && storage->data == NULL))
+    {
+        return false;
+    }
+
+    size_t left = 0;
+    size_t right = count;
+
+    while (left < right)
+    {
+        size_t middle = left + (right - left) / 2;
+
+        const void *element = contiguousStorage_AtConst(storage, middle, elementSize);
+
+        if (compare(element, target) < 0)
+        {
+            left = middle + 1;
+        }
+        else
+        {
+            right = middle;
+        }
+    }
+
+    if (left < count)
+    {
+        const void *element = contiguousStorage_AtConst(storage, left, elementSize);
+
+        if (compare(element, target) == 0)
+        {
+            *outIndex = left;
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void contiguousStorage_Destroy(ContiguousStorage_t *storage)
 {
     if (storage == NULL)

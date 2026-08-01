@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "../../element/comparators.h"
+
 /**
  * @brief Owns resizable contiguous raw storage.
  *
@@ -96,6 +98,27 @@ bool contiguousStorage_Erase(ContiguousStorage_t *storage, size_t count, size_t 
  * @return true when the address is inside storage; otherwise false.
  */
 bool contiguousStorage_ContainsAddress(const ContiguousStorage_t *storage, const void *address, size_t elementSize);
+
+/**
+ * @brief Finds the first matching element in sorted contiguous storage.
+ *
+ * The first @p count elements must already be ordered by @p compare.
+ *
+ * @param storage Initialized storage.
+ * @param count Current logical element count.
+ * @param elementSize Size of one element in bytes.
+ * @param compare Comparator defining the storage order.
+ * @param target Element value to find.
+ * @param[out] outIndex Index of the first matching element when found.
+ * @return true when a match is found; otherwise false.
+ */
+bool contiguousStorage_BinarySearchBy(
+    const ContiguousStorage_t *storage,
+    size_t count,
+    size_t elementSize,
+    CompareFn_t compare,
+    const void *target,
+    size_t *outIndex);
 
 /**
  * @brief Releases raw storage without destroying element resources.

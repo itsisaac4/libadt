@@ -146,6 +146,40 @@ bool st_Peek(const Stack_t *stack, void *outElement);
 #define stack_Pop st_Pop
 bool st_Pop(Stack_t *stack, void *outElement);
 
+/* --- st_BinarySearch / stack_BinarySearch -------------------------------- */
+
+/**
+ * @brief Finds the first matching element in a sorted stack.
+ *
+ * The stack must already be ordered from bottom to top by its configured
+ * comparator.
+ * Use adt_isSorted when the current ordering is uncertain.
+ *
+ * @param stack Sorted stack to search.
+ * @param target Element value to find.
+ * @param[out] outIndex Bottom-based index of the first matching element.
+ * @return true when a match is found; otherwise false.
+ */
+#define stack_BinarySearch st_BinarySearch
+bool st_BinarySearch(const Stack_t *stack, const void *target, size_t *outIndex);
+
+/* --- st_BinarySearchBy / stack_BinarySearchBy ---------------------------- */
+
+/**
+ * @brief Finds the first matching element in a stack sorted by a comparator.
+ *
+ * The stack must already be ordered from bottom to top by @p compare.
+ * Use adt_isSortedBy with the same comparator when the ordering is uncertain.
+ *
+ * @param stack Sorted stack to search.
+ * @param compare Comparator defining the stack order.
+ * @param target Element value to find.
+ * @param[out] outIndex Bottom-based index of the first matching element.
+ * @return true when a match is found; otherwise false.
+ */
+#define stack_BinarySearchBy st_BinarySearchBy
+bool st_BinarySearchBy(const Stack_t *stack, CompareFn_t compare, const void *target, size_t *outIndex);
+
 /* --- st_Discard / stack_Discard ------------------------------------------- */
 
 /**

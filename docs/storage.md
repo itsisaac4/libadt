@@ -26,6 +26,7 @@ The storage layer handles:
 - Inserting and erasing physical storage
 - Returning internal element addresses
 - Checking whether an address points into owned storage
+- Binary-searching an already sorted contiguous range
 
 The container handles:
 
@@ -35,7 +36,23 @@ The container handles:
 - Vtable traversal
 - Public operations such as `Append`, `Push`, or `Dequeue`
 
-Storage only knows the number of bytes in an element. It never calls an element's comparator, printer, converter, or destroy function. Keeping that dependency pointed one way makes the storage useful to more than one ADT.
+Storage normally knows only the element size. `contiguousStorage_BinarySearchBy` also receives a comparator for one call.
+
+Storage does not own or select callbacks. It never uses printers, numeric converters, or destroy functions.
+
+## Contiguous Binary Search
+
+`contiguousStorage_BinarySearchBy` searches the first `count` slots in O(log n). They must use the supplied comparator's ordering.
+
+Duplicate searches return the first physical match. A missing target leaves the output index unchanged.
+
+Dynamic arrays and stacks expose the public binary-search functions. Stack index zero is the bottom.
+
+Linked lists and queues use `LinkedStorage_t`, so they do not expose binary search.
+
+The shared O(n) sortedness checks work with both storage representations. They can verify uncertain ordering before a search.
+
+Default functions use the initialization comparator. The `By` forms must receive the same override comparator.
 
 ## Why Storage Does Not Keep the Size
 
@@ -64,7 +81,9 @@ Contiguous storage can check one allocation range in O(1). Linked storage must w
 
 Containers use these checks during `Take`, `Pop`, and `Dequeue`.
 
-For example, taking an array element into an output address inside that same array is unsafe: shifting the remaining bytes may overwrite the output. Linked storage has the same problem in a different form—the removed node may own the output address that is about to be freed.
+Taking an array element into its own storage is unsafe because shifting may overwrite the output.
+
+Linked storage has a similar risk: the removed node may own the output address being freed.
 
 ## Internal Visibility
 
@@ -81,6 +100,8 @@ The payoff is visible in stack and queue:
 
 For a stack, pushing and popping at the end avoids shifting existing elements; capacity only grows when the contiguous allocation is full. This also keeps stack traversal cache-friendly and avoids a separate allocation for every element.
 
-For a queue, the linked storage can append at the tail and unlink from the head without shifting the elements that remain. The tradeoff is separate node and element allocations with less memory locality, which is acceptable for the queue's endpoint-focused operations.
+Linked storage lets queues append at the tail and unlink from the head without shifting elements.
+
+The tradeoff is separate allocations and weaker memory locality.
 
 Both ADTs reuse allocation and mutation code without exposing dynamic-array or linked-list operations that do not belong in their public APIs.

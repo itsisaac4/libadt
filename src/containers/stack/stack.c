@@ -178,6 +178,44 @@ bool st_Pop(Stack_t *stack, void *outElement)
     return true;
 }
 
+bool st_BinarySearch(const Stack_t *stack, const void *target, size_t *outIndex)
+{
+    if (stack == NULL ||
+        target == NULL ||
+        outIndex == NULL ||
+        stack->super._private.elementType.compare == NULL)
+    {
+        return false;
+    }
+
+    return contiguousStorage_BinarySearchBy(
+        &stack->_private.storage,
+        stack->super._private.size,
+        stack->super._private.elementType.elementSize,
+        stack->super._private.elementType.compare,
+        target,
+        outIndex);
+}
+
+bool st_BinarySearchBy(const Stack_t *stack, CompareFn_t compare, const void *target, size_t *outIndex)
+{
+    if (stack == NULL ||
+        compare == NULL ||
+        target == NULL ||
+        outIndex == NULL)
+    {
+        return false;
+    }
+
+    return contiguousStorage_BinarySearchBy(
+        &stack->_private.storage,
+        stack->super._private.size,
+        stack->super._private.elementType.elementSize,
+        compare,
+        target,
+        outIndex);
+}
+
 bool st_Discard(Stack_t *stack)
 {
     if (stack == NULL || stack->super._private.size == 0)
